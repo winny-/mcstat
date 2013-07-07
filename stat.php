@@ -3,7 +3,7 @@
 require_once './mcstat.php';
 require_once './mcformat.php';
 
-$hostname = $_GET['server'];
+$hostname = htmlspecialchars($_GET['server']);
 
 if ($hostname) {
     $status = MC_getServerStatus($hostname);
