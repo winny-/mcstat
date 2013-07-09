@@ -6,8 +6,10 @@ require_once './mcformat.php';
 $hostname = htmlspecialchars($_GET['server']);
 
 if ($hostname) {
-    $status = MC_getServerStatus($hostname);
+    $status = MC_serverListPing($hostname);
 }
+
+$hostname =  htmlspecialchars($hostname);
 
 echo '
 <html>

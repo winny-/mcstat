@@ -19,7 +19,7 @@ function MC_decodeUCS2BE($string)
     return mb_convert_encoding($string, 'UTF-8', 'UCS-2BE');
 }
 
-function MC_getServerStatus($hostname, $port=25565)
+function MC_serverListPing($hostname, $port=25565)
 {
     // 1. pack data to send
     $request = pack('nc', 0xfe01, 0xfa) .
