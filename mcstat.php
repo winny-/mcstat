@@ -89,35 +89,63 @@ function MC_getStrings($fp, $count)
     return $strings;
 }
 
-function MC_query($hostname, $port=25565)
+function MC_makeSessionId()
 {
-    $sessionId = rand(1, 0xFFFFFFFF) & 0x0F0F0F0F;
+    return rand(1, 0xFFFFFFFF) & 0x0F0F0F0F;
+}
+
+// Verify packet type and ensure it references our session ID.
+function MC_validateQueryResponse($response, $responseType, $sessionId)
+{
+    if (strpos($response, $responseType) !== 0 && (int)substr($response, 1, 4) === $sessionId) {
+        error_log('Received invalid response "' . bin2hex($response) . '". Returning.');
+        return false;
+    }
+    return true;
+}
+
+function MC_handleQueryHandshake($fp, $sessionId)
+{
     $handshakeRequest = pack('cccN', 0xFE, 0xFD, 9, $sessionId);
+
+    fwrite($fp, $handshakeRequest);
+    $handshakeResponse = fread($fp, 2048);
+
+    if (!MC_validateQueryResponse($handshakeResponse, 9, $sessionId)) {
+        return false;
+    }
+
+    $challengeToken = substr($handshakeResponse, 5, -1);
+
+    return $challengeToken;
+}
+
+function MC_basicQuery($hostname, $port=25565)
+{
+    $sessionId = MC_makeSessionId();
 
     $fp = stream_socket_client('udp://' . $hostname . ':' . $port);
     if (!$fp) {
         return false;
     }
 
-    fwrite($fp, $handshakeRequest);
-    $handshakeResponse = fread($fp, 2048);
+    $time = microtime(true);
 
-    // Ensure packet type is "handshake" and references our session ID.
-    if (strpos($handshakeResponse, 9) !== 0 && substr(1, 4) != $sessionId) {
+    $challengeToken = MC_handleQueryHandshake($fp, $sessionId);
+    if (!$challengeToken) {
         fclose($fp);
-        error_log('Received invalid handshake response "' . bin2hex($handshakeResponse) . '". Returning.');
         return false;
     }
 
-    $challengeToken = substr($handshakeResponse, 5, -1);
+    $time = round((microtime(true)-$time)*1000);
+
 
     $statRequest = pack('cccNN', 0xFE, 0xFD, 0, $sessionId, $challengeToken);
     fwrite($fp, $statRequest);
     $statResponseHeader = fread($fp, 5);
 
-    if (strpos($statResponseHeader, 0) !== 0 && substr($statResponseHeader, 1, 4) != $sessionId) {
+    if (!MC_validateQueryResponse($statResponseHeader, 0, $sessionId)) {
         fclose($fp);
-        error_log('Received invalid stat response header "' . bin2hex($statResponseHeader) . '". Returning.');
         return false;
     }
 
@@ -128,11 +156,97 @@ function MC_query($hostname, $port=25565)
                  'motd' => $statData[0],
                  'gametype' => $statData[1],
                  'map' => $statData[2],
-                 'players' => $statData[3],
-                 'players_max' => $statData[4],
-                 'port' => $statData[5],
-                 'ip' => $statData[6]
+                 'player_count' => $statData[3],
+                 'player_max' => $statData[4],
+                 'port' => (string)$statData[5],
+                 'ip' => $statData[6],
+                 'latency' => $time
                  );
+}
+
+function MC_fullQuery($hostname, $port=25565)
+{
+    $sessionId = MC_makeSessionId();
+
+    $fp = stream_socket_client('udp://' . $hostname . ':' . $port);
+    if (!$fp) {
+        return false;
+    }
+
+    $time = microtime(true);
+
+    $challengeToken = MC_handleQueryHandshake($fp, $sessionId);
+    if (!$challengeToken) {
+        fclose($fp);
+        return false;
+    }
+
+    $time = round((microtime(true)-$time)*1000);
+
+    $statRequest = pack('cccNNN', 0xFE, 0xFD, 0, $sessionId, $challengeToken, 0);
+    fwrite($fp, $statRequest);
+    $statResponseHeader = fread($fp, 5);
+
+    if (!MC_validateQueryResponse($statResponseHeader, 0, $sessionId)) {
+        fclose($fp);
+        return false;
+    }
+
+    fread($fp, 11);
+ 
+    // Should only encounter double null thrice.
+    while ($doubleNulsEncountered < 3) {
+        $c = fread($fp, 1);
+        $statResponse .= $c;
+
+        if ($lastWasNul && $c === chr(0)) {
+            $doubleNulsEncountered++;
+        }
+
+        $lastWasNul = ($c === chr(0));
+    }
+
+    fclose($fp);
+
+    $statResponseData = explode(pack('cccccccccccc', 0x00, 0x00, 0x01, 0x70, 0x6C, 0x61,
+                                     0x79, 0x65, 0x72, 0x5F, 0x00, 0x00), $statResponse);
+    foreach (explode(chr(0), $statResponseData[0]) as $index => $item) {
+        if (!($index % 2)) {
+            switch ($item) {
+            case 'numplayers':
+                $key = 'player_count';
+                break;
+            case 'maxplayers':
+                $key = 'player_max';
+                break;
+            case 'hostname':
+                $key = 'motd';
+                break;
+            case 'hostip':
+                $key = 'ip';
+                break;
+            case 'hostport':
+                $key = 'port';
+                break;
+            default:
+                $key = $item;
+                break;
+            }
+        } else {
+            if ($key == 'port') {
+                $item = (string)$item;
+            }
+            $stats[$key] = $item;
+        }
+    }
+
+    $stats['latency'] = $time;
+
+    $players = explode(chr(0), $statResponseData[1]);
+    array_pop($players);
+
+    $stats['players'] = $players;
+    return $stats;
 }
 
 ?>
