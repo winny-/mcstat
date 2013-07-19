@@ -3,10 +3,11 @@
 require_once './mcstat.php';
 require_once './mcformat.php';
 
-$hostname = htmlspecialchars($_GET['server']);
+$hostname = $_GET['server'];
 
 if ($hostname) {
-    $status = MC_serverListPing($hostname);
+    $m = new MinecraftStatus($hostname);
+    $status = $m->ping();
 }
 
 $hostname =  htmlspecialchars($hostname);
