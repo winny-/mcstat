@@ -3,14 +3,17 @@
 require_once './mcstat.php';
 require_once './mcformat.php';
 
-$hostname = $_GET['server'];
+$hostname = NULL;
+if (array_key_exists('server', $_GET)) {
+    $hostname = $_GET['server'];
+}
 
 if ($hostname) {
     $m = new MinecraftStatus($hostname);
     $status = $m->ping();
 }
 
-$hostname =  htmlspecialchars($hostname);
+$hostname = htmlspecialchars($hostname);
 
 echo '
 <html>
@@ -48,6 +51,6 @@ if ($hostname) {
 
 echo '</body>
 </html>';
-        
+
 
 ?>

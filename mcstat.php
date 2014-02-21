@@ -21,8 +21,8 @@ class MinecraftStatus {
         $this->stats[microtime()] = array(
                                           'stats' => $newStats,
                                           'method' => 'Server List Ping',
-                                          'hostname' => $hostname,
-                                          'port' => $port
+                                          'hostname' => $this->hostname,
+                                          'port' => $this->port
                                           );
 
         return $newStats;
