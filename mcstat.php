@@ -1,3 +1,4 @@
+#!/usr/bin/env php
 <?php
 
 // This file is in the public domain.
@@ -296,6 +297,28 @@ class MinecraftStatus {
 
         $stats['players'] = $players;
         return $stats;
+    }
+}
+
+
+if (!count(debug_backtrace())) {
+    $args = array_slice($argv, 1);
+    foreach ($args as $arg) {
+        $e = explode(':', $arg, 1);
+        $len = count($e);
+        if ($len > 2 || $len < 1) {
+            print('Invalid host '.$arg);
+            exit(1);
+        } elseif ($len == 1) {
+            $e[1] = 25565;
+        }
+        $m = new MinecraftStatus($e[0], $e[1]);
+        $reply = $m->ping();
+        $motd = preg_replace('/\x{00A7}./u', '', $reply['motd']);
+        $message = $e[0].':'.$e[1].' '.$motd.' ';
+        $message .= $reply['player_count'].'/'.$reply['player_max']. ' ';
+        $message .= $reply['latency'].'ms'."\n";
+        print($message);
     }
 }
 
