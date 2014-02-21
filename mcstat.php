@@ -313,7 +313,7 @@ if (!count(debug_backtrace())) {
         }
         $m = new MinecraftStatus($e[0], $e[1]);
         $reply = $m->ping();
-        $motd = preg_replace('/\x{00A7}./u', '', $reply['motd']);
+        $motd = preg_replace("/(\\x{00A7}.|\n)/u", '', $reply['motd']);
         $message = $e[0].':'.$e[1].' '.$motd.' ';
         $message .= $reply['player_count'].'/'.$reply['player_max']. ' ';
         $message .= $reply['latency'].'ms'."\n";
