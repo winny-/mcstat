@@ -1,8 +1,6 @@
 #!/usr/bin/env php
 <?php
 
-// This file is in the public domain.
-
 class MinecraftStatus {
 
     public $hostname;
