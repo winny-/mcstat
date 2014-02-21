@@ -52,5 +52,4 @@ if ($hostname) {
 echo '</body>
 </html>';
 
-
 ?>

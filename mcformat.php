@@ -1,8 +1,9 @@
 <?php
+
 // Multibyte str_split()
 function MC_str_split( $string )
-{ 
-    return preg_split('/(?<!^)(?!$)/u', $string ); 
+{
+    return preg_split('/(?<!^)(?!$)/u', $string );
 }
 
 // http://www.wiki.vg/Chat
@@ -94,4 +95,5 @@ function MC_parseMotdColors($motd)
 
     return $coloredMotd;
 }
+
 ?>

@@ -243,7 +243,7 @@ class MinecraftStatus {
         }
 
         fread($fp, 11);
- 
+
         // Should only encounter double null thrice.
         while ($doubleNulsEncountered < 3) {
             $c = fread($fp, 1);
@@ -300,6 +300,7 @@ class MinecraftStatus {
     }
 }
 
+// ============================================================
 
 if (!count(debug_backtrace())) {
     $args = array_slice($argv, 1);
