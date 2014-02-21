@@ -1,6 +1,10 @@
 # mcstat
 
-PHP class to get information from a Minecraft server. 
+PHP class, web page, CLI tool, and [Munin][] plugin to get information from a
+[Minecraft][] server.
+
+[Munin]: http://munin-monitoring.org/
+[Minecraft]: http://www.minecraft.net/
 
 ## Protocol Support
 
@@ -18,6 +22,30 @@ It also supports the UDP [Query][] protocol.
 well tested!
 
 ![Screenshot of stat.php](https://i.imgur.com/Nc4yVOi.png)
+
+### mcstat as a Program
+mcstat.php may be invoked as a program. Place it in your `$PATH` and make
+sure it's executable! It's very simple:
+
+    $ mcstat.php scav.tv
+    scav.tv:25565 {==| Scavenger Craft 3.0 |==}Factions | FFA | VOTE NOW FOR $15! 169/525 264ms
+
+
+### minecraft_users.php — A Munin plugin
+
+![Screenshot of the minecraft_users.php plugin](https://i.imgur.com/lAfCXLF.png)
+
+Install minecraft_users.php like any other munin plugin:
+
+    # cp minecraft_users.php /usr/share/munin/plugins/minecraft_users
+    # chmod 755 /usr/share/munin/plugins/minecraft_users
+    # ln -s /usr/share/munin/plugins/minecraft_users /etc/munin/plugins/minecraft_users
+
+This is how you can configure the plugin:
+
+    [minecraft_users]
+    env.host aminecraftserver.org
+    env.port 25565
 
 ### Usage as a PHP Class
     php > require_once './mcstat.php';
