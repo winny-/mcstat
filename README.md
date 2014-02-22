@@ -27,9 +27,9 @@ well tested!
 mcstat.php may be invoked as a program. Place it in your `$PATH` and make
 sure it's executable! It's very simple:
 
-    $ mcstat.php scav.tv
-    scav.tv:25565 {==| Scavenger Craft 3.0 |==}Factions | FFA | VOTE NOW FOR $15! 169/525 264ms
-
+    uberminecraft.com v1.7.4 2714/5000 131ms
+    Uberminecraft Cloud | 22 Games
+    1.7 Play Now!
 
 ### minecraft_users.php — A Munin plugin
 

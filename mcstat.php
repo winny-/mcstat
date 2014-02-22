@@ -242,7 +242,7 @@ class MinecraftStatus {
 
         fread($fp, 11);
 
-        // Should only encounter double null thrice.
+        // Should encounter double null only thrice.
         while ($doubleNulsEncountered < 3) {
             $c = fread($fp, 1);
             $statResponse .= $c;
@@ -298,25 +298,47 @@ class MinecraftStatus {
     }
 }
 
-// ============================================================
+/*
+  =========================
+  Program portion of mcstat
+  =========================
 
+  Invocation like so:
+
+  $ mcstat uberminecraft.com
+  uberminecraft.com v1.7.4 2714/5000 131ms
+  Uberminecraft Cloud | 22 Games
+  1.7 Play Now!
+
+  XXX: Error handling.
+ */
+
+// This is PHP's idiom to check if script is being invoked directly.
+// http://stackoverflow.com/questions/2413991/php-equivalent-of-pythons-name-main
 if (!count(debug_backtrace())) {
     $args = array_slice($argv, 1);
     foreach ($args as $arg) {
         $e = explode(':', $arg, 1);
         $len = count($e);
+        $host = $e[0];
+        $port = 25565;
         if ($len > 2 || $len < 1) {
             print('Invalid host '.$arg);
             exit(1);
         } elseif ($len == 1) {
-            $e[1] = 25565;
+            $port = 25565;
         }
-        $m = new MinecraftStatus($e[0], $e[1]);
+
+        $m = new MinecraftStatus($host, $port);
         $reply = $m->ping();
-        $motd = preg_replace("/(\\x{00A7}.|\n)/u", '', $reply['motd']);
-        $message = $e[0].':'.$e[1].' '.$motd.' ';
-        $message .= $reply['player_count'].'/'.$reply['player_max']. ' ';
-        $message .= $reply['latency'].'ms'."\n";
+        $motd = preg_replace("/\\x{00A7}./u", '', $reply['motd']);
+
+        $message = $host;
+        $message .= ($port == 25565) ? '' : ':'.$port;
+        $message .= ' v'.$reply['server_version'];
+        $message .= ' '.$reply['player_count'].'/'.$reply['player_max'];
+        $message .= ' '.$reply['latency'].'ms'."\n";
+        $message .= $motd."\n";
         print($message);
     }
 }
