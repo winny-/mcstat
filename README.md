@@ -24,9 +24,15 @@ well tested!
 ![Screenshot of stat.php](https://i.imgur.com/Nc4yVOi.png)
 
 ### mcstat as a Program
-mcstat.php may be invoked as a program. Place it in your `$PATH` and make
-sure it's executable! It's very simple:
+`mcstat.php` may be invoked as a program. Because it's also a php library,
+it doesn't come with a shebang line. Install like this:
 
+    $ echo '#!/usr/bin/env php'|cat - mcstat.php > ~/bin/mcstat
+    $ chmod 755 ~/bin/mcstat
+
+It's very simple and gets the job done:
+
+    $ mcstat uberminecraft.com
     uberminecraft.com v1.7.4 2714/5000 131ms
     Uberminecraft Cloud | 22 Games
     1.7 Play Now!

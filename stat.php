@@ -45,7 +45,7 @@ if ($hostname) {
             '/' . $status['player_max'] . '</td><td>' . $status['latency'] . '</td></tr>';
         echo '</table>';
     } else {
-        echo '<p>Could not query server.</p>';
+        echo '<p>Could not query '.$hostname.' ('.$m->lastError.')</p>';
     }
 }
 

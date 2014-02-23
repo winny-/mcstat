@@ -1,4 +1,3 @@
-#!/usr/bin/env php
 <?php
 
 class MinecraftStatus {
@@ -82,8 +81,9 @@ class MinecraftStatus {
 
         // 2. open communication socket and make transaction
         $time = microtime(true);
-        $fp = stream_socket_client('tcp://' . $hostname . ':' . $port);
+        $fp = stream_socket_client('tcp://' . $hostname . ':' . $port, $errno, $errmsg);
         if (!$fp) {
+            $this->lastError = $errmsg;
             return false;
         }
         fwrite($fp, $request);
@@ -93,6 +93,7 @@ class MinecraftStatus {
 
         // 3. unpack data and return
         if (strpos($response, 0xFF) !== 0) {
+            $this->lastError = 'Bad reply from server';
             return false;
         }
         $response = substr($response, 3);
@@ -172,8 +173,9 @@ class MinecraftStatus {
     {
         $sessionId = $this->makeSessionId();
 
-        $fp = stream_socket_client('udp://' . $hostname . ':' . $port);
+        $fp = stream_socket_client('udp://' . $hostname . ':' . $port, $errno, $errmsg);
         if (!$fp) {
+            $this->lastError = $errmsg;
             return false;
         }
 
@@ -182,6 +184,7 @@ class MinecraftStatus {
         $challengeToken = $this->handleQueryHandshake($fp, $sessionId);
         if (!$challengeToken) {
             fclose($fp);
+            $this->lastError = 'Bad challenge token';
             return false;
         }
 
@@ -194,6 +197,7 @@ class MinecraftStatus {
 
         if (!$this->validateQueryResponse($statResponseHeader, 0, $sessionId)) {
             fclose($fp);
+            $this->lastError = 'Bad query response';
             return false;
         }
 
@@ -212,12 +216,13 @@ class MinecraftStatus {
                      );
     }
 
-    private function fullQuery($hostname, $port=25565)
+    private function fullQuery($hostname, $port=25565, $errno, $errmsg)
     {
         $sessionId = $this->makeSessionId();
 
         $fp = stream_socket_client('udp://' . $hostname . ':' . $port);
         if (!$fp) {
+            $this->lastError = $errmsg;
             return false;
         }
 
@@ -226,6 +231,7 @@ class MinecraftStatus {
         $challengeToken = $this->handleQueryHandshake($fp, $sessionId);
         if (!$challengeToken) {
             fclose($fp);
+            $this->lastError = 'Bad challenge token';
             return false;
         }
 
@@ -237,6 +243,7 @@ class MinecraftStatus {
 
         if (!$this->validateQueryResponse($statResponseHeader, 0, $sessionId)) {
             fclose($fp);
+            $this->lastError = 'Bad query response';
             return false;
         }
 
@@ -303,34 +310,49 @@ class MinecraftStatus {
   Program portion of mcstat
   =========================
 
+  Make sure to add a shebang to the first line to use as a cli program. Note
+  the shebang will be visible in webpages, so don't use a shebanged copy in
+  a website. An example shebang as follows:
+
+  #!/usr/bin/env php
+
+
   Invocation like so:
 
   $ mcstat uberminecraft.com
   uberminecraft.com v1.7.4 2714/5000 131ms
   Uberminecraft Cloud | 22 Games
   1.7 Play Now!
-
-  XXX: Error handling.
  */
 
 // This is PHP's idiom to check if script is being invoked directly.
 // http://stackoverflow.com/questions/2413991/php-equivalent-of-pythons-name-main
 if (!count(debug_backtrace())) {
+    error_reporting(E_ERROR | E_PARSE);
+    $STDERR = fopen('php://stderr', 'w+');
+    $errorCount = 0;
+
     $args = array_slice($argv, 1);
+
     foreach ($args as $arg) {
-        $e = explode(':', $arg, 1);
-        $len = count($e);
-        $host = $e[0];
+        $hostWithPort = explode(':', $arg);
+        $len = count($hostWithPort);
+        $host = $hostWithPort[0];
         $port = 25565;
-        if ($len > 2 || $len < 1) {
+        if ($len == 2) {
+            $port = $hostWithPort[1];
+        } elseif ($len != 1) {
             print('Invalid host '.$arg);
-            exit(1);
-        } elseif ($len == 1) {
-            $port = 25565;
+            exit(++$errorCount);
         }
 
         $m = new MinecraftStatus($host, $port);
         $reply = $m->ping();
+        if (!$reply) {
+            fwrite($STDERR, 'Error pinging '.$host.':'.$port.' ('.$m->lastError.")\n");
+            $errorCount++;
+            continue;
+        }
         $motd = preg_replace("/\\x{00A7}./u", '', $reply['motd']);
 
         $message = $host;
@@ -341,6 +363,7 @@ if (!count(debug_backtrace())) {
         $message .= $motd."\n";
         print($message);
     }
+    exit($errorCount);
 }
 
 ?>
