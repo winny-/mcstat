@@ -5,7 +5,7 @@ require_once 'config.php';
 
 class MinecraftStatusTest extends PHPUnit_Framework_TestCase
 {
-    public function testServerReply()
+    public function testServerListPing()
     {
         global $hostname, $port, $mc_version, $motd;
 

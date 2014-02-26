@@ -5,13 +5,29 @@ Hostname='127.0.0.1'
 
 ServerProperties='test-server.properties'
 
-runtest() {
+waitForServerStart() {
+    printf 'Waiting for server to start up... '
+    run fgrep -m 1 'Query running on' < "$ServerDir/log.fifo" &>/dev/null
+    printf 'ready.\n'
+}
+
+waitForServerStop() {
+    printf 'Waiting for server to stop... '
+    pid=$(<"$ServerDir/PIDFILE")
+    while ps "$pid" &>/dev/null; do
+        kill "$pid"
+        sleep 2
+    done
+    printf 'stopped.\n'
+}
+
+runTest() {
     Version=$1
     JarFile="minecraft_server.$Version.jar"
     JarDownload="https://s3.amazonaws.com/Minecraft.Download/versions/$Version/$JarFile"
     ServerDir="server-$Version"
     run mkdir -p "$ServerDir"
-    killserver
+    kill $(<"$ServerDir/PIDFILE") &>/dev/null
     if [ ! -e "$ServerDir/$JarFile" ]; then
         printf 'Downloading %s\n' "$JarFile"
         run curl -\# -o "$ServerDir/$JarFile" "$JarDownload"
@@ -20,27 +36,20 @@ runtest() {
     run cp "$ServerProperties" "$ServerDir/server.properties"
     run sed -e "s|VERSION|$Version|" -e "s|PORT|$Port|" -e "s|MOTD|$Motd|" \
         -e "s|HOSTNAME|$Hostname|" < config-template.php > config.php
+    [ ! -p "$ServerDir/log.fifo" ] && run mkfifo "$ServerDir/log.fifo"
     cd "$ServerDir"
-    java -jar "$JarFile" -Xmx256M -Xms128M nogui &> "mylog.txt" &
+    java -jar "$JarFile" -Xmx256M -Xms128M nogui &> 'log.fifo' &
     cd - >/dev/null
     echo "$!" > "$ServerDir/PIDFILE"
 
-    # Ideally this script should watch the log. Works for now.
-    echo 'Waiting 20 seconds for sever to initialize.'
-    sleep 20
+    waitForServerStart
 
     echo 'Running tests.'
     echo
     phpunit -v --color --debug test.php
     ret=$?
 
-    killserver
-}
-
-killserver() {
-    kill -TERM $(cat "$ServerDir/PIDFILE") 2>/dev/null
-    # Same as above comment, should watch for the even, not simply wait a while.
-    sleep 5
+    waitForServerStop
 }
 
 run() {
@@ -52,7 +61,7 @@ run() {
 
 errors=0
 for v in $Versions; do
-    runtest "$v"
+    runTest "$v"
     errors=$(($errors + $ret))
 done
 exit $errors
