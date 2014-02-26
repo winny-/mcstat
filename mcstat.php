@@ -1,16 +1,20 @@
 <?php
 
-class MinecraftStatus {
+class MinecraftStatus
+{
 
     public $hostname;
     public $port;
 
+    public $lastError;
     public $stats;
 
     function __construct($hostname, $port=25565)
     {
         $this->hostname = $hostname;
         $this->port = $port;
+        $this->lastError = null;
+        $this->stats = array();
     }
 
     public function ping()
@@ -71,7 +75,7 @@ class MinecraftStatus {
         return mb_convert_encoding($string, 'UTF-8', 'UTF-16BE');
     }
 
-    private function serverListPing($hostname, $port=25565)
+    private function serverListPing($hostname, $port)
     {
         // 1. pack data to send
         $request = pack('nc', 0xfe01, 0xfa) .
@@ -170,7 +174,7 @@ class MinecraftStatus {
         return $challengeToken;
     }
 
-    private function basicQuery($hostname, $port=25565)
+    private function basicQuery($hostname, $port)
     {
         $sessionId = $this->makeSessionId();
 
@@ -217,7 +221,7 @@ class MinecraftStatus {
                      );
     }
 
-    private function fullQuery($hostname, $port=25565, $errno, $errmsg)
+    private function fullQuery($hostname, $port)
     {
         $sessionId = $this->makeSessionId();
 
