@@ -76,3 +76,18 @@ This is how you can configure the plugin:
       ["latency"]=>
       float(150)
     }
+
+## Testing
+The testing script requires `bash`, [`phpunit`][phpunit], and `java`. The tests
+are ran against against a live server running on localhost.
+
+Run the script as follows:
+
+    cd test
+    ./testrunner.sh
+
+
+As of commit `979fed97d06a35a96af9195e7750ea1648602154`, `basicQuery`,
+`fullQuery`, and `serverListPing` all pass.
+
+[phpunit]: http://phpunit.de/
