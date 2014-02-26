@@ -126,6 +126,8 @@ class MinecraftStatus
     private function getStrings($fp, $count)
     {
         $nulsProcessed = 0;
+        $c = null;
+        $s = null;
 
         while ($nulsProcessed < $count) {
             while ($c != chr(0)) {
@@ -136,8 +138,8 @@ class MinecraftStatus
             $strings[] = $s;
             $nulsProcessed++;
 
-            unset($c);
-            unset($s);
+            $c = null;
+            $s = null;
         }
 
         return $strings;
@@ -254,6 +256,9 @@ class MinecraftStatus
 
         fread($fp, 11);
 
+        $doubleNulsEncountered = 0;
+        $lastWasNul = false;
+        $statResponse = '';
         // Should encounter double null only thrice.
         while ($doubleNulsEncountered < 3) {
             $c = fread($fp, 1);

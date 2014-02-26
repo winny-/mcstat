@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
-JarDownload='https://s3.amazonaws.com/Minecraft.Download/versions/1.7.4/minecraft_server.1.7.4.jar'
-JarFile='minecraft_server.1.7.4.jar'
+Version='1.7.4'
+Port='9876'
+Hostname='127.0.0.1'
+JarFile="minecraft_server.$Version.jar"
+JarDownload="https://s3.amazonaws.com/Minecraft.Download/versions/$Version/$JarFile"
 SERVERDIR='server'
 ServerProperties='test-server.properties'
 
@@ -18,7 +21,7 @@ run() {
 run mkdir -p "$SERVERDIR"
 run cd "$SERVERDIR"
 if [ ! -e "$JarFile" ]; then
-    printf 'Downloading %s\n' "JarFile"
+    printf 'Downloading %s\n' "$JarFile"
     run curl -\# -O "$JarDownload"
 fi
 
@@ -26,6 +29,7 @@ killserver
 
 echo 'Starting server...'
 run cp "../$ServerProperties" 'server.properties'
+sed -e "s|VERSION|$Version|" -e "s|PORT|$Port|" -e "s|MOTD|$Motd|" -e "s|HOSTNAME|$Hostname|" < ../config-template.php > ../config.php
 java -jar "$JarFile" -Xmx256M -Xms128M nogui &>/dev/null &
 echo "$!" > PIDFILE
 
