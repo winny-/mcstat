@@ -37,6 +37,10 @@ It's very simple and gets the job done:
     Uberminecraft Cloud | 22 Games
     1.7 Play Now!
 
+*Please note:
+[`TERM` must be set to a known terminal](https://github.com/nodesocket/commando/issues/9),
+otherwise php spams stderr unconditionally.*
+
 ### minecraft_users.php — A Munin plugin
 
 ![Screenshot of the minecraft_users.php plugin](https://i.imgur.com/lAfCXLF.png)
