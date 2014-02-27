@@ -31,7 +31,8 @@ if ((count($argv) > 1) && ($argv[1] == 'config')) {
     print("graph_vlabel players\n");
     print("players.label Number of players\n");
     print("max_players.label Max players\n");
-    print("graph_info Number of players connected to Minecraft\n");
+    print("graph_info Number of players connected to Minecraft. " .
+          "If Max players is 0, the server is unreachable.\n");
     print("graph_scale no\n");
     print("graph_category minecraft\n");
     exit();
@@ -48,14 +49,15 @@ if ((count($argv) > 1) && ($argv[1] == 'config')) {
 
 function MC_packString($string)
 {
-    return pack('n', strlen($string)) . mb_convert_encoding($string, 'UCS-2BE');
+    $letterCount = strlen($string);
+    return pack('n', $letterCount) . mb_convert_encoding($string, 'UTF-16BE');}
 }
 
 // This is needed since UCS-2 text rendered as UTF-8 contains unnecessary null bytes
 // and could cause other components, especially string functions to blow up. Boom!
-function MC_decodeUCS2BE($string)
+function MC_decodeUTF16BE($string)
 {
-    return mb_convert_encoding($string, 'UTF-8', 'UCS-2BE');
+    return mb_convert_encoding($string, 'UTF-8', 'UTF-16BE');
 }
 
 function MC_serverListPing($hostname, $port=25565)
@@ -86,11 +88,11 @@ function MC_serverListPing($hostname, $port=25565)
     $response = explode(pack('n', 0), $response);
 
     return array(
-                 'player_count' => MC_decodeUCS2BE($response[4]),
-                 'player_max' => MC_decodeUCS2BE($response[5]),
-                 'motd' => MC_decodeUCS2BE($response[3]),
-                 'server_version' => MC_decodeUCS2BE($response[2]),
-                 'protocol_version' => MC_decodeUCS2BE($response[1]),
+                 'player_count' => MC_decodeUTF16BE($response[4]),
+                 'player_max' => MC_decodeUTF16BE($response[5]),
+                 'motd' => MC_decodeUTF16BE($response[3]),
+                 'server_version' => MC_decodeUTF16BE($response[2]),
+                 'protocol_version' => MC_decodeUTF16BE($response[1]),
                  'latency' => $time
                  );
 }
