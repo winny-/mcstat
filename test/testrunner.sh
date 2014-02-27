@@ -1,7 +1,11 @@
 #!/usr/bin/env bash
-Versions='1.4.2 1.4.4 1.4.5 1.4.6 1.4.7 1.5 1.5.1 1.5.2 1.6.1 1.6.2 1.6.4 1.7.2 1.7.4 1.7.5'
-Port='9876'
-Hostname='127.0.0.1'
+: ${Versions:='1.4.2 1.4.4 1.4.5 1.4.6 1.4.7 1.5 1.5.1 1.5.2 1.6.1 1.6.2 1.6.4 1.7.2 1.7.4 1.7.5'}
+: ${Port:='9876'}
+: ${Hostname:='127.0.0.1'}
+MinecraftUsersDead='players.value 0
+max_players.value 0'
+MinecraftUsersEmpty='players.value 0
+max_players.value 20'
 
 ServerProperties='test-server.properties'
 
@@ -19,6 +23,7 @@ waitForServerStop() {
         sleep 2
     done
     printf 'stopped.\n'
+    rm "$ServerDir/PIDFILE"
 }
 
 runTest() {
@@ -27,7 +32,7 @@ runTest() {
     JarDownload="https://s3.amazonaws.com/Minecraft.Download/versions/$Version/$JarFile"
     ServerDir="server-$Version"
     run mkdir -p "$ServerDir"
-    kill $(<"$ServerDir/PIDFILE") &>/dev/null
+    [ -e "$ServerDir/PIDFILE" ] && kill $(<"$ServerDir/PIDFILE") &>/dev/null
     if [ ! -e "$ServerDir/$JarFile" ]; then
         printf 'Downloading %s\n' "$JarFile"
         run curl -\# -o "$ServerDir/$JarFile" "$JarDownload"
@@ -49,6 +54,16 @@ runTest() {
     phpunit -v --color --debug test.php
     ret=$?
 
+    echo 'Testing minecraft_users.php against empty server.'
+    reply="$(host="$Hostname" port="$Port" ../minecraft_users.php)"
+    if [ "$reply" != "$MinecraftUsersEmpty" ]; then
+        echo 'minecraft_users.php failed "Empty server test".'
+        printf 'Got "%s"\n' "$reply"
+        ret=$(($ret + 1))
+    else
+        echo .
+    fi
+
     waitForServerStop
 }
 
@@ -64,4 +79,25 @@ for v in $Versions; do
     runTest "$v"
     errors=$(($errors + $ret))
 done
+
+echo 'Testing minecraft_users.php against a dead server.'
+reply="$(host="$Hostname" port="$Port" ../minecraft_users.php)"
+if [ "$reply" != "$MinecraftUsersDead" ]; then
+    echo 'FAILED'
+    errors=$(($errors + 1))
+else
+    echo .
+fi
+echo 'Testing minecraft_users.php against unresponsive server.'
+nc -l "$Port" >/dev/null &
+ncpid=$!
+reply="$(host="$Hostname" port="$Port" ../minecraft_users.php)"
+if [ "$reply" != "$MinecraftUsersDead" ]; then
+    echo 'FAILED'
+    errors=$(($errors + 1))
+else
+    echo .
+fi
+kill $ncpid &>/dev/null
+
 exit $errors
