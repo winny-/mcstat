@@ -27,7 +27,7 @@ $port = getenv('port');
 $port = $port ? $port : '25565';
 
 if ((count($argv) > 1) && ($argv[1] == 'config')) {
-    print("graph_title Connected players\n");
+    print("graph_title Players connected to {$host}:{$port}\n");
     print("graph_vlabel players\n");
     print("players.label Number of players\n");
     print("max_players.label Max players\n");
@@ -86,13 +86,13 @@ function MC_serverListPing($hostname, $port=25565)
     $response = explode(pack('n', 0), $response);
 
     return array(
-                'player_count' => MC_decodeUCS2BE($response[4]),
-                'player_max' => MC_decodeUCS2BE($response[5]),
-                'motd' => MC_decodeUCS2BE($response[3]),
-                'server_version' => MC_decodeUCS2BE($response[2]),
-                'protocol_version' => MC_decodeUCS2BE($response[1]),
-                'latency' => $time
-                );
+                 'player_count' => MC_decodeUCS2BE($response[4]),
+                 'player_max' => MC_decodeUCS2BE($response[5]),
+                 'motd' => MC_decodeUCS2BE($response[3]),
+                 'server_version' => MC_decodeUCS2BE($response[2]),
+                 'protocol_version' => MC_decodeUCS2BE($response[1]),
+                 'latency' => $time
+                 );
 }
 
 // ============================================================
