@@ -79,10 +79,10 @@ function MC_serverListPing($hostname, $port)
 
     fwrite($fp, $request);
     $response = fread($fp, 2048);
-    $info = stream_get_meta_data($fp);
+    $socketInfo = stream_get_meta_data($fp);
 
     fclose($fp);
-    if ($info['timed_out']) {
+    if ($socketInfo['timed_out']) {
       return false;
     }
 

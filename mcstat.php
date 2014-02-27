@@ -87,13 +87,19 @@ class MinecraftStatus
         // 2. open communication socket and make transaction
         $time = microtime(true);
         $fp = stream_socket_client('tcp://' . $hostname . ':' . $port, $errno, $errmsg);
+        stream_set_timeout($fp, 5);
         if (!$fp) {
             $this->lastError = $errmsg;
             return false;
         }
         fwrite($fp, $request);
         $response = fread($fp, 2048);
+        $socketInfo = stream_get_meta_data($fp);
         fclose($fp);
+        if ($socketInfo['timed_out']) {
+            $this->lastError = 'Connection timed out';
+            return false;
+        }
         $time = round((microtime(true)-$time)*1000);
 
         // 3. unpack data and return
@@ -181,6 +187,7 @@ class MinecraftStatus
         $sessionId = $this->makeSessionId();
 
         $fp = stream_socket_client('udp://' . $hostname . ':' . $port, $errno, $errmsg);
+        stream_set_timeout($fp, 5);
         if (!$fp) {
             $this->lastError = $errmsg;
             return false;
@@ -227,7 +234,8 @@ class MinecraftStatus
     {
         $sessionId = $this->makeSessionId();
 
-        $fp = stream_socket_client('udp://' . $hostname . ':' . $port);
+        $fp = stream_socket_client('udp://' . $hostname . ':' . $port, $errno, $errmsg);
+        stream_set_timeout($fp, 5);
         if (!$fp) {
             $this->lastError = $errmsg;
             return false;
