@@ -1,5 +1,7 @@
 # mcstat
 
+[![Build Status](https://travis-ci.org/winny-/mcstat.png?branch=master)](https://travis-ci.org/winny-/mcstat)
+
 PHP class, web page, CLI tool, and [Munin][] plugin to get information from a
 [Minecraft][] server.
 
