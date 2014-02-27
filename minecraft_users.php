@@ -21,10 +21,10 @@
 error_reporting(E_ERROR | E_PARSE);
 
 $host = getenv('host');
-$host = $host ? $host : 'localhost';
+$host = empty($host) ? 'localhost' : $host;
 
 $port = getenv('port');
-$port = $port ? $port : '25565';
+$port = empty($port) ? '25565' : $port;
 
 if ((count($argv) > 1) && ($argv[1] == 'config')) {
     print("graph_title Players connected to {$host}:{$port}\n");
@@ -32,7 +32,7 @@ if ((count($argv) > 1) && ($argv[1] == 'config')) {
     print("players.label Number of players\n");
     print("max_players.label Max players\n");
     print("graph_info Number of players connected to Minecraft. " .
-          "If Max players is 0, the server is unreachable.\n");
+    "If Max players is 0, the server is unreachable.\n");
     print("graph_scale no\n");
     print("graph_category minecraft\n");
     exit();
@@ -50,7 +50,7 @@ if ((count($argv) > 1) && ($argv[1] == 'config')) {
 function MC_packString($string)
 {
     $letterCount = strlen($string);
-    return pack('n', $letterCount) . mb_convert_encoding($string, 'UTF-16BE');}
+    return pack('n', $letterCount) . mb_convert_encoding($string, 'UTF-16BE');
 }
 
 // This is needed since UCS-2 text rendered as UTF-8 contains unnecessary null bytes
@@ -60,24 +60,32 @@ function MC_decodeUTF16BE($string)
     return mb_convert_encoding($string, 'UTF-8', 'UTF-16BE');
 }
 
-function MC_serverListPing($hostname, $port=25565)
+function MC_serverListPing($hostname, $port)
 {
     // 1. pack data to send
     $request = pack('nc', 0xfe01, 0xfa) .
         MC_packString('MC|PingHost') .
         pack('nc', 7+2*strlen($hostname), 73) .
         MC_packString($hostname) .
-        pack('N', 25565);
+        pack('N', $port);
 
     // 2. open communication socket and make transaction
     $time = microtime(true);
     $fp = stream_socket_client('tcp://' . $hostname . ':' . $port);
+    stream_set_timeout($fp, 5);
     if (!$fp) {
         return false;
     }
+
     fwrite($fp, $request);
     $response = fread($fp, 2048);
+    $info = stream_get_meta_data($fp);
+
     fclose($fp);
+    if ($info['timed_out']) {
+      return false;
+    }
+
     $time = round((microtime(true)-$time)*1000);
 
     // 3. unpack data and return
@@ -88,19 +96,21 @@ function MC_serverListPing($hostname, $port=25565)
     $response = explode(pack('n', 0), $response);
 
     return array(
-                 'player_count' => MC_decodeUTF16BE($response[4]),
-                 'player_max' => MC_decodeUTF16BE($response[5]),
-                 'motd' => MC_decodeUTF16BE($response[3]),
-                 'server_version' => MC_decodeUTF16BE($response[2]),
-                 'protocol_version' => MC_decodeUTF16BE($response[1]),
-                 'latency' => $time
-                 );
+        'player_count' => MC_decodeUTF16BE($response[4]),
+        'player_max' => MC_decodeUTF16BE($response[5]),
+        'motd' => MC_decodeUTF16BE($response[3]),
+        'server_version' => MC_decodeUTF16BE($response[2]),
+        'protocol_version' => MC_decodeUTF16BE($response[1]),
+        'latency' => $time
+    );
 }
 
 // ============================================================
 
 $reply = MC_serverListPing($host, $port);
+$player_count = empty($reply['player_count']) ? '0' : $reply['player_count'];
+$player_max = empty($reply['player_max']) ? '0' : $reply['player_max'];
 
-print('players.value ' . $reply['player_count'] . "\n");
-print('max_players.value ' . $reply['player_max'] . "\n");
+print('players.value ' . $player_count . "\n");
+print('max_players.value ' . $player_max . "\n");
 ?>
