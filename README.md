@@ -10,8 +10,8 @@ PHP class, web page, CLI tool, and [Munin][] plugin to get information from a
 
 ## Protocol Support
 
-mcstat supports 1.5.2 style [Server List Ping][] which still works on 1.7.4.
-It also supports the UDP [Query][] protocol.
+mcstat supports 1.5.2 style [Server List Ping][] which works with minecraft server `1.4.2` and later, including `1.7.5`.
+mcstat also supports the UDP [Query][] protocol.
 
 [Server List Ping]: http://wiki.vg/Server_List_Ping
 [Query]: http://wiki.vg/Query
@@ -45,7 +45,7 @@ otherwise php spams stderr unconditionally.*
 
 ### minecraft_users.php — A Munin plugin
 
-![Screenshot of the minecraft_users.php plugin](https://i.imgur.com/lAfCXLF.png)
+![Screenshot of the minecraft_users.php plugin](https://i.imgur.com/VutO3X9.png)
 
 Install minecraft_users.php like any other munin plugin:
 
@@ -85,9 +85,12 @@ are ran against against a live server running on localhost.
 
 Run the script as follows:
 
-    cd test
-    ./testrunner.sh
+    cd test && ./testrunner.sh
 
+By default `testrunner.sh` tests against all server versions `1.4.2` and later.
+Override this like so:
+
+    cd test && env Versions='1.7.4 1.7.5' ./testrunner.sh
 
 As of commit `979fed97d06a35a96af9195e7750ea1648602154`, `basicQuery`,
 `fullQuery`, and `serverListPing` all pass.
