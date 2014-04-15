@@ -375,7 +375,7 @@ if (!count(debug_backtrace())) {
 
         $message = $host;
         $message .= ($port == 25565) ? '' : ':'.$port;
-        $message .= ' v'.$reply['server_version'];
+        $message .= ' '.$reply['server_version'];
         $message .= ' '.$reply['player_count'].'/'.$reply['player_max'];
         $message .= ' '.$reply['latency'].'ms'."\n";
         $message .= $motd."\n";
