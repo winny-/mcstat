@@ -2,6 +2,7 @@
 : ${Versions:='1.4.2 1.4.4 1.4.5 1.4.6 1.4.7 1.5 1.5.1 1.5.2 1.6.1 1.6.2 1.6.4 1.7.2 1.7.4 1.7.5'}
 : ${Port:='9876'}
 : ${Hostname:='127.0.0.1'}
+MinecraftUsersSymlink="./minecraft_users_$Hostname:$Port"
 MinecraftUsersDead='players.value 0
 max_players.value 0'
 MinecraftUsersEmpty='players.value 0
@@ -71,8 +72,8 @@ runTest() {
     phpunit --colors test.php
     ret=$?
 
-    printf '>>> Testing minecraft_users.php against empty server ... '
-    reply="$(host="$Hostname" port="$Port" ../minecraft_users.php 2>/dev/null)"
+    printf '>>> Testing minecraft_users_ against empty server ... '
+    reply="$("$MinecraftUsersSymlink")"
     if [ "$reply" != "$MinecraftUsersEmpty" ]; then
         fail
         printf '>>> Got "%s"\n' "$reply"
@@ -92,24 +93,26 @@ run() {
     fi
 }
 
+cd "$(dirname "$0")"
+ln -sf ../minecraft_users_ "$MinecraftUsersSymlink"
 errors=0
 for v in $Versions; do
     runTest "$v"
     errors=$(($errors + $ret))
 done
 
-printf '>>> Testing minecraft_users.php against a dead server ... '
-reply="$(host="$Hostname" port="$Port" ../minecraft_users.php 2>/dev/null)"
+printf '>>> Testing minecraft_users_ against a dead server ... '
+reply="$("$MinecraftUsersSymlink")"
 if [ "$reply" != "$MinecraftUsersDead" ]; then
     fail
     errors=$(($errors + 1))
 else
     ok
 fi
-printf '>>> Testing minecraft_users.php against unresponsive server ... '
+printf '>>> Testing minecraft_users_ against unresponsive server ... '
 nc -l "$Port" >/dev/null &
 ncpid=$!
-reply="$(host="$Hostname" port="$Port" ../minecraft_users.php 2>/dev/null)"
+reply="$("$MinecraftUsersSymlink")"
 if [ "$reply" != "$MinecraftUsersDead" ]; then
     fail
     errors=$(($errors + 1))
