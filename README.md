@@ -19,6 +19,7 @@ mcstat also supports the UDP [Query][] protocol.
 ## Usage
 
 ### stat.php
+
 `stat.php` is a simple web page that lets users query a given server.
 **Note:** `stat.php` shouldn't be used on a public server as it's not
 well tested!
@@ -26,6 +27,7 @@ well tested!
 ![Screenshot of stat.php](https://i.imgur.com/Nc4yVOi.png)
 
 ### mcstat as a Program
+
 `mcstat.php` may be invoked as a program. Because it's also a php library,
 it doesn't come with a shebang line. Install like this:
 
@@ -43,23 +45,20 @@ It's very simple and gets the job done:
 [`TERM` must be set to a known terminal](https://github.com/nodesocket/commando/issues/9),
 otherwise php spams stderr unconditionally.*
 
-### minecraft_users.php — A Munin plugin
+### minecraft_users_ — A Munin plugin
 
-![Screenshot of the minecraft_users.php plugin](https://i.imgur.com/VutO3X9.png)
+![Screenshot of the minecraft_users_ plugin](https://i.imgur.com/VutO3X9.png)
 
-Install minecraft_users.php like any other munin plugin:
+Install minecraft_users_ like any other munin plugin:
 
     # cp minecraft_users.php /usr/share/munin/plugins/minecraft_users
     # chmod 755 /usr/share/munin/plugins/minecraft_users
-    # ln -s /usr/share/munin/plugins/minecraft_users /etc/munin/plugins/minecraft_users
+    # ln -s /usr/share/munin/plugins/minecraft_users_ /etc/munin/plugins/minecraft_users_<hostname>:<port>
 
-This is how you can configure the plugin:
-
-    [minecraft_users]
-    env.host aminecraftserver.org
-    env.port 25565
+No configuration is necessary because minecraft_users_ is a wildcard plugin.
 
 ### Usage as a PHP Class
+
     php > require_once './mcstat.php';
     php > $m = new MinecraftStatus('Uberminecraft.com');
     php > var_dump($m->ping());
@@ -80,6 +79,7 @@ This is how you can configure the plugin:
     }
 
 ## Testing
+
 The testing script requires `bash`, [`phpunit`][phpunit], and `java`. The tests
 are ran against against a live server running on localhost.
 

@@ -8,23 +8,23 @@
 
   This is munin plugin to monitor the player count on a Minecraft server.
   Install it like any other munin plugin:
-  # cp minecraft_users.php /usr/share/munin/plugins/minecraft_users
-  # chmod 755 /usr/share/munin/plugins/minecraft_users
-  # ln -s /usr/share/munin/plugins/minecraft_users /etc/munin/plugins/minecraft_users
+  # cp minecraft_users_ /usr/share/munin/plugins/minecraft_users_
+  # chmod 755 /usr/share/munin/plugins/minecraft_users_
+  # ln -s /usr/share/munin/plugins/minecraft_users_ /etc/munin/plugins/minecraft_users_<hostname>:<port>
 
-  Config:
-  [minecraft_users]
-  env.host aminecraftserver.org
-  env.port 25565
+  No configuration is necessary because minecraft_users_ is a wildcard plugin.
  */
 
 error_reporting(E_ERROR | E_PARSE);
 
-$host = getenv('host');
-$host = empty($host) ? 'localhost' : $host;
-
-$port = getenv('port');
-$port = empty($port) ? '25565' : $port;
+$plugin_name = $argv[0];
+if (preg_match('/minecraft_users_([^[:blank:][:cntrl:]]+)\(:([0-9]+)\)?$/', $plugin_name, $matches)) {
+    $host = $matches[1];
+    $port = empty($matches[2]) ? '25565' : $matches[2];
+} else {
+    error_log("Warning: Plugin {$plugin_name} not configured correctly");
+    exit();
+}
 
 if ((count($argv) > 1) && ($argv[1] == 'config')) {
     print("graph_title Players connected to {$host}:{$port}\n");
