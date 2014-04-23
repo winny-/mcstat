@@ -17,7 +17,7 @@ ok() {
 
 fail() {
     tput setaf 1
-    printf 'FAIL'
+    printf 'FAIL\n'
     tput sgr0
 }
 
