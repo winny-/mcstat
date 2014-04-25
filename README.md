@@ -37,7 +37,7 @@ it doesn't come with a shebang line. Install like this:
 It's very simple and gets the job done:
 
     $ mcstat uberminecraft.com
-    uberminecraft.com v1.7.4 2714/5000 131ms
+    uberminecraft.com 1.7.4 2714/5000 131ms
     Uberminecraft Cloud | 22 Games
     1.7 Play Now!
 
@@ -53,7 +53,9 @@ Install minecraft_users_ like any other munin plugin:
 
     # cp minecraft_users.php /usr/share/munin/plugins/minecraft_users
     # chmod 755 /usr/share/munin/plugins/minecraft_users
-    # ln -s /usr/share/munin/plugins/minecraft_users_ /etc/munin/plugins/minecraft_users_<hostname>:<port>
+    # ln -s /usr/share/munin/plugins/minecraft_users_ \
+        /etc/munin/plugins/minecraft_users_<hostname>:<port>
+    # service munin-node reload
 
 No configuration is necessary because minecraft_users_ is a wildcard plugin.
 
