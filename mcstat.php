@@ -1,7 +1,7 @@
 <?php
 
 
-define('MCSTAT_NETWORK_TIMEOUT', 5)
+define('MCSTAT_NETWORK_TIMEOUT', 5);
 
 
 class MinecraftStatus
@@ -27,6 +27,7 @@ class MinecraftStatus
             $newStats = MinecraftServerListPing::ping($this->hostname, $this->port);
         } catch (Exception $e) {
             $newStats = false;
+            $this->lastError = $e->getMessage();
         }
         $this->stats[microtime()] = array(
                                           'stats' => $newStats,
@@ -45,6 +46,7 @@ class MinecraftStatus
                 $newStats = MinecraftQuery::fullQuery($this->hostname, $this->port);
             } catch (Exception $e) {
                 $newStats = false;
+                $this->lastError = $e->getMessage();
             }
             $this->stats[microtime()] = array(
                                               'stats' => $newStats,
@@ -57,6 +59,7 @@ class MinecraftStatus
                 $newStats = MinecraftQuery::basicQuery($this->hostname, $this->port);
             } catch (Exception $e) {
                 $newStats = false;
+                $this->lastError = $e->getMessage();
             }
             $this->stats[microtime()] = array(
                                               'stats' => $newStats,
@@ -109,20 +112,20 @@ class MinecraftServerListPing
         $fp = stream_socket_client('tcp://' . $hostname . ':' . $port, $errno, $errmsg, MCSTAT_NETWORK_TIMEOUT);
         stream_set_timeout($fp, MCSTAT_NETWORK_TIMEOUT);
         if (!$fp) {
-            throw Exception($errmsg);
+            throw new Exception($errmsg);
         }
         fwrite($fp, $request);
         $response = fread($fp, 2048);
         $socketInfo = stream_get_meta_data($fp);
         fclose($fp);
         if ($socketInfo['timed_out']) {
-            throw Exception('Connection timed out');
+            throw new Exception('Connection timed out');
         }
         $time = round((microtime(true)-$time)*1000);
 
         // 3. unpack data and return
         if (strpos($response, 0xFF) !== 0) {
-            throw Exception('Bad reply from server');
+            throw new Exception('Bad reply from server');
         }
         $response = substr($response, 3);
         $response = explode(pack('n', 0), $response);
@@ -211,7 +214,7 @@ class MinecraftQuery
         $fp = stream_socket_client('udp://' . $hostname . ':' . $port, $errno, $errmsg, MCSTAT_NETWORK_TIMEOUT);
         stream_set_timeout($fp, MCSTAT_NETWORK_TIMEOUT);
         if (!$fp) {
-            throw Exception($errmsg);
+            throw new Exception($errmsg);
         }
 
         $time = microtime(true);
@@ -219,7 +222,7 @@ class MinecraftQuery
         $challengeToken = self::handleQueryHandshake($fp, $sessionId);
         if (!$challengeToken) {
             fclose($fp);
-            throw Exception('Bad challenge token');
+            throw new Exception('Bad challenge token');
         }
 
         $time = round((microtime(true)-$time)*1000);
@@ -231,7 +234,7 @@ class MinecraftQuery
 
         if (!self::validateQueryResponse($statResponseHeader, 0, $sessionId)) {
             fclose($fp);
-            throw Exception('Bad query response');
+            throw new Exception('Bad query response');
         }
 
         $statData = array_merge(self::getStrings($fp, 5), unpack('v', fread($fp, 2)), self::getStrings($fp, 1));
@@ -256,7 +259,7 @@ class MinecraftQuery
         $fp = stream_socket_client('udp://' . $hostname . ':' . $port, $errno, $errmsg, MCSTAT_NETWORK_TIMEOUT);
         stream_set_timeout($fp, MCSTAT_NETWORK_TIMEOUT);
         if (!$fp) {
-            throw Exception($errmsg);
+            throw new Exception($errmsg);
         }
 
         $time = microtime(true);
@@ -264,7 +267,7 @@ class MinecraftQuery
         $challengeToken = self::handleQueryHandshake($fp, $sessionId);
         if (!$challengeToken) {
             fclose($fp);
-            throw Exception('Bad challenge token');
+            throw new Exception('Bad challenge token');
         }
 
         $time = round((microtime(true)-$time)*1000);
@@ -275,7 +278,7 @@ class MinecraftQuery
 
         if (!self::validateQueryResponse($statResponseHeader, 0, $sessionId)) {
             fclose($fp);
-            throw Exception('Bad query response');
+            throw new Exception('Bad query response');
         }
 
         fread($fp, 11);
