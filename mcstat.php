@@ -153,16 +153,35 @@ class MinecraftServerListPing
 class MinecraftQuery
 {
 
+    private static function getString($fp)
+    {
+        for ($lastChar = fread($fp, 1), $currentString = ''; $lastChar !== chr(0); $lastChar = fread($fp, 1)) {
+            $currentString .= $lastChar;
+        }
+        return $currentString;
+    }
+
     private static function getStrings($fp, $count)
     {
         for ($nulsProcessed = 0; $nulsProcessed < $count; $nulsProcessed++) {
-            for ($lastChar = fread($fp, 1), $currentString = ''; $lastChar !== chr(0); $lastChar = fread($fp, 1)) {
-                $currentString .= $lastChar;
-            }
-            $strings[] = $currentString;
+            $strings[] = self::getString($fp);
         }
 
         return $strings;
+    }
+
+    private static function parseKeyValueSection($fp)
+    {
+        $keyValuePairs = array();
+        while (true) {
+            $key = self::getString($fp);
+            if ($key === '') {
+                break;
+            }
+            $value = self::getString($fp);
+            $keyValuePairs[$key] = $value;
+        }
+        return $keyValuePairs;
     }
 
     private static function makeSessionId()
@@ -203,8 +222,7 @@ class MinecraftQuery
         $header = fread($fp, 5);
         $unpacked = unpack('ctype/NsessionId', $header);
         if ($withChallengeToken) {
-            $ary = self::getStrings($fp, 1);
-            $unpacked['challengeToken'] = (int)$ary[0];
+            $unpacked['challengeToken'] = (int)self::getString($fp);
         }
         return $unpacked;
     }
@@ -276,65 +294,40 @@ class MinecraftQuery
     {
         $vars = self::startQuery($hostname, $port, true);
         $fp = $vars['fp'];
-        $time = $vars['time'];
 
-        fread($fp, 11);
+        $stats = array();
+        $stats['latency'] = $vars['time'];
 
-        $doubleNulsEncountered = 0;
-        $lastWasNul = false;
-        $statResponse = '';
-        // Should encounter double null only thrice.
-        while ($doubleNulsEncountered < 3) {
-            $c = fread($fp, 1);
-            $statResponse .= $c;
+        fread($fp, 11);  // 11 bytes padding: 73 70 6C 69 74 6E 75 6D 00 80 00
 
-            if ($lastWasNul && $c === chr(0)) {
-                $doubleNulsEncountered++;
-            }
-
-            $lastWasNul = ($c === chr(0));
-        }
-
-        fclose($fp);
-
-        $statResponseData = explode(pack('cccccccccccc', 0x00, 0x00, 0x01, 0x70, 0x6C, 0x61,
-                                         0x79, 0x65, 0x72, 0x5F, 0x00, 0x00), $statResponse);
-        foreach (explode(chr(0), $statResponseData[0]) as $index => $item) {
-            if (!($index % 2)) {
-                switch ($item) {
+        foreach (self::parseKeyValueSection($fp) as $key => $value) {
+            switch ($key) {
                 case 'numplayers':
-                    $key = 'player_count';
-                    break;
+                $key = 'player_count';
+                break;
                 case 'maxplayers':
-                    $key = 'player_max';
-                    break;
+                $key = 'player_max';
+                break;
                 case 'hostname':
-                    $key = 'motd';
-                    break;
+                $key = 'motd';
+                break;
                 case 'hostip':
-                    $key = 'ip';
-                    break;
+                $key = 'ip';
+                break;
                 case 'hostport':
-                    $key = 'port';
-                    break;
-                default:
-                    $key = $item;
-                    break;
-                }
-            } else {
-                if ($key == 'port') {
-                    $item = (string)$item;
-                }
-                $stats[$key] = $item;
+                $key = 'port';
+                break;
             }
+            $stats[$key] = $value;
         }
 
-        $stats['latency'] = $time;
+        fread($fp, 10);  // 10 bytes padding: 01 70 6C 61 79 65 72 5F 00 00
 
-        $players = explode(chr(0), $statResponseData[1]);
-        array_pop($players);
-
+        $players = array();
+        for ($last = self::getString($fp); $last !== ''; $last = self::getString($fp))
+            $players[] = $last;
         $stats['players'] = $players;
+        fclose($fp);
         return $stats;
     }
 }
