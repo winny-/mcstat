@@ -1,5 +1,9 @@
 <?php
 
+
+define('MCSTAT_NETWORK_TIMEOUT', 5)
+
+
 class MinecraftStatus
 {
 
@@ -102,8 +106,8 @@ class MinecraftServerListPing
 
         // 2. open communication socket and make transaction
         $time = microtime(true);
-        $fp = stream_socket_client('tcp://' . $hostname . ':' . $port, $errno, $errmsg);
-        stream_set_timeout($fp, 5);
+        $fp = stream_socket_client('tcp://' . $hostname . ':' . $port, $errno, $errmsg, MCSTAT_NETWORK_TIMEOUT);
+        stream_set_timeout($fp, MCSTAT_NETWORK_TIMEOUT);
         if (!$fp) {
             throw Exception($errmsg);
         }
@@ -204,8 +208,8 @@ class MinecraftQuery
     {
         $sessionId = self::makeSessionId();
 
-        $fp = stream_socket_client('udp://' . $hostname . ':' . $port, $errno, $errmsg);
-        stream_set_timeout($fp, 5);
+        $fp = stream_socket_client('udp://' . $hostname . ':' . $port, $errno, $errmsg, MCSTAT_NETWORK_TIMEOUT);
+        stream_set_timeout($fp, MCSTAT_NETWORK_TIMEOUT);
         if (!$fp) {
             throw Exception($errmsg);
         }
@@ -249,8 +253,8 @@ class MinecraftQuery
     {
         $sessionId = self::makeSessionId();
 
-        $fp = stream_socket_client('udp://' . $hostname . ':' . $port, $errno, $errmsg);
-        stream_set_timeout($fp, 5);
+        $fp = stream_socket_client('udp://' . $hostname . ':' . $port, $errno, $errmsg, MCSTAT_NETWORK_TIMEOUT);
+        stream_set_timeout($fp, MCSTAT_NETWORK_TIMEOUT);
         if (!$fp) {
             throw Exception($errmsg);
         }
