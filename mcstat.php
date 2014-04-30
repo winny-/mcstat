@@ -207,7 +207,7 @@ class MinecraftQuery
     }
 
 
-    public static function query($hostname, $port=25565)
+    public static function basicQuery($hostname, $port=25565)
     {
         $sessionId = self::makeSessionId();
 
