@@ -155,21 +155,11 @@ class MinecraftQuery
 
     private static function getStrings($fp, $count)
     {
-        $nulsProcessed = 0;
-        $c = null;
-        $s = null;
-
-        while ($nulsProcessed < $count) {
-            while ($c != chr(0)) {
-                $s .= $c;
-                $c = fread($fp, 1);
+        for ($nulsProcessed = 0; $nulsProcessed < $count; $nulsProcessed++) {
+            for ($lastChar = fread($fp, 1), $currentString = ''; $lastChar !== chr(0); $lastChar = fread($fp, 1)) {
+                $currentString .= $lastChar;
             }
-
-            $strings[] = $s;
-            $nulsProcessed++;
-
-            $c = null;
-            $s = null;
+            $strings[] = $currentString;
         }
 
         return $strings;
@@ -181,35 +171,45 @@ class MinecraftQuery
     }
 
     // Verify packet type and ensure it references our session ID.
-    private static function validateQueryResponse($response, $responseType, $sessionId)
+    private static function validateResponse($response, $type, $sessionId)
     {
-        $unpacked = unpack('ctype/NsessionId', $response);
-        if ($unpacked['type'] !== $responseType || $unpacked['sessionId'] !== $sessionId) {
-            error_log('Received invalid response "' . bin2hex($response) . '" for request ' . 
-                $responseType.' -- '. bin2hex(pack('N', $sessionId)));
+        $invalidType = ($response['type'] !== $type);
+        $invalidSessionId = ($response['sessionId'] !== $sessionId);
+        if ($invalidType || $invalidSessionId) {
+            $errorMessage = 'Invalid Response:';
+            $errorMessage .= ($invalidType) ? " {$response['type']} !== {$type}" : '';
+            $errorMessage .= ($invalidSessionId) ? " {$response['sessionId']} !== {$sessionId}" : '';
+            error_log($errorMessage);
             return false;
         }
         return true;
     }
 
-    private static function handleQueryHandshake($fp, $sessionId)
+    private static function handleHandshake($fp, $sessionId)
     {
         $handshakeRequest = pack('cccN', 0xFE, 0xFD, 9, $sessionId);
 
         fwrite($fp, $handshakeRequest);
-        $handshakeResponse = fread($fp, 2048);
-
-        if (!self::validateQueryResponse($handshakeResponse, 9, $sessionId)) {
+        $handshakeResponse = self::readResponseHeader($fp, true);
+        if (!self::validateResponse($handshakeResponse, 9, $sessionId)) {
             return false;
         }
 
-        $challengeToken = substr($handshakeResponse, 5, -1);
-
-        return $challengeToken;
+        return $handshakeResponse['challengeToken'];
     }
 
+    private static function readResponseHeader($fp, $withChallengeToken=false)
+    {
+        $header = fread($fp, 5);
+        $unpacked = unpack('ctype/NsessionId', $header);
+        if ($withChallengeToken) {
+            $ary = self::getStrings($fp, 1);
+            $unpacked['challengeToken'] = (int)$ary[0];
+        }
+        return $unpacked;
+    }
 
-    public static function basicQuery($hostname, $port=25565)
+    private static function startQuery($hostname, $port, $fullQuery)
     {
         $sessionId = self::makeSessionId();
 
@@ -221,23 +221,41 @@ class MinecraftQuery
 
         $time = microtime(true);
 
-        $challengeToken = self::handleQueryHandshake($fp, $sessionId);
+        $challengeToken = self::handleHandshake($fp, $sessionId);
         if (!$challengeToken) {
             fclose($fp);
-            throw new Exception('Bad challenge token');
+            throw new Exception('Bad handshake response');
         }
 
         $time = round((microtime(true)-$time)*1000);
 
-
         $statRequest = pack('cccNN', 0xFE, 0xFD, 0, $sessionId, $challengeToken);
+        if ($fullQuery) {
+            $statRequest .= pack('N', 0);
+        }
         fwrite($fp, $statRequest);
-        $statResponseHeader = fread($fp, 5);
+        $statResponseHeader = self::readResponseHeader($fp);
 
-        if (!self::validateQueryResponse($statResponseHeader, 0, $sessionId)) {
+        if (!self::validateResponse($statResponseHeader, 0, $sessionId)) {
             fclose($fp);
             throw new Exception('Bad query response');
         }
+
+        return array(
+            'sessionId'      => $sessionId,
+            'challengeToken' => $challengeToken,
+            'fp'             => $fp,
+            'time'           => $time,
+        );
+    }
+
+    public static function basicQuery($hostname, $port=25565)
+    {
+        $vars = self::startQuery($hostname, $port, false);
+        $fp = $vars['fp'];
+        $time = $vars['time'];
+
+
 
         $statData = array_merge(self::getStrings($fp, 5), unpack('v', fread($fp, 2)), self::getStrings($fp, 1));
 
@@ -256,32 +274,9 @@ class MinecraftQuery
 
     public static function fullQuery($hostname, $port=25565)
     {
-        $sessionId = self::makeSessionId();
-
-        $fp = stream_socket_client('udp://' . $hostname . ':' . $port, $errno, $errmsg, MCSTAT_NETWORK_TIMEOUT);
-        stream_set_timeout($fp, MCSTAT_NETWORK_TIMEOUT);
-        if (!$fp) {
-            throw new Exception($errmsg);
-        }
-
-        $time = microtime(true);
-
-        $challengeToken = self::handleQueryHandshake($fp, $sessionId);
-        if (!$challengeToken) {
-            fclose($fp);
-            throw new Exception('Bad challenge token');
-        }
-
-        $time = round((microtime(true)-$time)*1000);
-
-        $statRequest = pack('cccNNN', 0xFE, 0xFD, 0, $sessionId, $challengeToken, 0);
-        fwrite($fp, $statRequest);
-        $statResponseHeader = fread($fp, 5);
-
-        if (!self::validateQueryResponse($statResponseHeader, 0, $sessionId)) {
-            fclose($fp);
-            throw new Exception('Bad query response');
-        }
+        $vars = self::startQuery($hostname, $port, true);
+        $fp = $vars['fp'];
+        $time = $vars['time'];
 
         fread($fp, 11);
 
