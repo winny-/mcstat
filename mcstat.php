@@ -19,7 +19,11 @@ class MinecraftStatus
 
     public function ping()
     {
-        $newStats = $this->serverListPing($this->hostname, $this->port);
+        try {
+            $newStats = MinecraftServerListPing::ping($this->hostname, $this->port);
+        } catch (Exception $e) {
+            $newStats = false;
+        }
         $this->stats[microtime()] = array(
                                           'stats' => $newStats,
                                           'method' => 'Server List Ping',
@@ -33,7 +37,11 @@ class MinecraftStatus
     public function query($fullQuery=true)
     {
         if ($fullQuery) {
-            $newStats = $this->fullQuery($this->hostname, $this->port);
+            try {
+                $newStats = MinecraftQuery::fullQuery($this->hostname, $this->port);
+            } catch (Exception $e) {
+                $newStats = false;
+            }
             $this->stats[microtime()] = array(
                                               'stats' => $newStats,
                                               'method' => 'Full Query',
@@ -41,7 +49,11 @@ class MinecraftStatus
                                               'port' => $this->port
                                               );
         } else {
-            $newStats = $this->basicQuery($this->hostname, $this->port);
+            try {
+                $newStats = MinecraftQuery::basicQuery($this->hostname, $this->port);
+            } catch (Exception $e) {
+                $newStats = false;
+            }
             $this->stats[microtime()] = array(
                                               'stats' => $newStats,
                                               'method' => 'Basic Query',
@@ -52,17 +64,21 @@ class MinecraftStatus
 
         return $newStats;
     }
+}
 
-    /*
-      ================
-      Server List Ping
-      ================
+/*
+  ================
+  Server List Ping
+  ================
 
-      An example of how to get a Minecraft server status's using a "Server List Ping" packet.
-      See details here: http://www.wiki.vg/Server_List_Ping
-    */
+  An example of how to get a Minecraft server status's using a "Server List Ping" packet.
+  See details here: http://www.wiki.vg/Server_List_Ping
+*/
 
-    private function packString($string)
+class MinecraftServerListPing
+{
+
+    private static function packString($string)
     {
         $letterCount = strlen($string);
         return pack('n', $letterCount) . mb_convert_encoding($string, 'UTF-16BE');
@@ -70,18 +86,18 @@ class MinecraftStatus
 
     // This is needed since UTF-16BE text rendered as UTF-8 contains unnecessary null bytes
     // and could cause other components, especially string functions to blow up. Boom!
-    private function decodeUTF16BE($string)
+    private static function decodeUTF16BE($string)
     {
         return mb_convert_encoding($string, 'UTF-8', 'UTF-16BE');
     }
 
-    private function serverListPing($hostname, $port)
+    public static function ping($hostname, $port=25565)
     {
         // 1. pack data to send
         $request = pack('nc', 0xfe01, 0xfa) .
-            $this->packString('MC|PingHost') .
+            self::packString('MC|PingHost') .
             pack('nc', 7+2*strlen($hostname), 73) .
-            $this->packString($hostname) .
+            self::packString($hostname) .
             pack('N', 25565);
 
         // 2. open communication socket and make transaction
@@ -89,47 +105,48 @@ class MinecraftStatus
         $fp = stream_socket_client('tcp://' . $hostname . ':' . $port, $errno, $errmsg);
         stream_set_timeout($fp, 5);
         if (!$fp) {
-            $this->lastError = $errmsg;
-            return false;
+            throw Exception($errmsg);
         }
         fwrite($fp, $request);
         $response = fread($fp, 2048);
         $socketInfo = stream_get_meta_data($fp);
         fclose($fp);
         if ($socketInfo['timed_out']) {
-            $this->lastError = 'Connection timed out';
-            return false;
+            throw Exception('Connection timed out');
         }
         $time = round((microtime(true)-$time)*1000);
 
         // 3. unpack data and return
         if (strpos($response, 0xFF) !== 0) {
-            $this->lastError = 'Bad reply from server';
-            return false;
+            throw Exception('Bad reply from server');
         }
         $response = substr($response, 3);
         $response = explode(pack('n', 0), $response);
 
         return array(
-                     'player_count' => $this->decodeUTF16BE($response[4]),
-                     'player_max' => $this->decodeUTF16BE($response[5]),
-                     'motd' => $this->decodeUTF16BE($response[3]),
-                     'server_version' => $this->decodeUTF16BE($response[2]),
-                     'protocol_version' => $this->decodeUTF16BE($response[1]),
+                     'player_count' => self::decodeUTF16BE($response[4]),
+                     'player_max' => self::decodeUTF16BE($response[5]),
+                     'motd' => self::decodeUTF16BE($response[3]),
+                     'server_version' => self::decodeUTF16BE($response[2]),
+                     'protocol_version' => self::decodeUTF16BE($response[1]),
                      'latency' => $time
                      );
     }
+}
 
-    /*
-      =====
-      Query
-      =====
+/*
+  =====
+  Query
+  =====
 
-      This section utilizes the UT3 Query protocol to query a Minecraft server.
-      Read about it here: http://wiki.vg/Query
-    */
+  This section utilizes the UT3 Query protocol to query a Minecraft server.
+  Read about it here: http://wiki.vg/Query
+*/
 
-    private function getStrings($fp, $count)
+class MinecraftQuery
+{
+
+    private static function getStrings($fp, $count)
     {
         $nulsProcessed = 0;
         $c = null;
@@ -151,13 +168,13 @@ class MinecraftStatus
         return $strings;
     }
 
-    private function makeSessionId()
+    private static function makeSessionId()
     {
         return rand(1, 0xFFFFFFFF) & 0x0F0F0F0F;
     }
 
     // Verify packet type and ensure it references our session ID.
-    private function validateQueryResponse($response, $responseType, $sessionId)
+    private static function validateQueryResponse($response, $responseType, $sessionId)
     {
         if (strpos($response, $responseType) !== 0 && (int)substr($response, 1, 4) === $sessionId) {
             error_log('Received invalid response "' . bin2hex($response) . '". Returning.');
@@ -166,14 +183,14 @@ class MinecraftStatus
         return true;
     }
 
-    private function handleQueryHandshake($fp, $sessionId)
+    private static function handleQueryHandshake($fp, $sessionId)
     {
         $handshakeRequest = pack('cccN', 0xFE, 0xFD, 9, $sessionId);
 
         fwrite($fp, $handshakeRequest);
         $handshakeResponse = fread($fp, 2048);
 
-        if (!$this->validateQueryResponse($handshakeResponse, 9, $sessionId)) {
+        if (!self::validateQueryResponse($handshakeResponse, 9, $sessionId)) {
             return false;
         }
 
@@ -182,24 +199,23 @@ class MinecraftStatus
         return $challengeToken;
     }
 
-    private function basicQuery($hostname, $port)
+
+    public static function query($hostname, $port=25565)
     {
-        $sessionId = $this->makeSessionId();
+        $sessionId = self::makeSessionId();
 
         $fp = stream_socket_client('udp://' . $hostname . ':' . $port, $errno, $errmsg);
         stream_set_timeout($fp, 5);
         if (!$fp) {
-            $this->lastError = $errmsg;
-            return false;
+            throw Exception($errmsg);
         }
 
         $time = microtime(true);
 
-        $challengeToken = $this->handleQueryHandshake($fp, $sessionId);
+        $challengeToken = self::handleQueryHandshake($fp, $sessionId);
         if (!$challengeToken) {
             fclose($fp);
-            $this->lastError = 'Bad challenge token';
-            return false;
+            throw Exception('Bad challenge token');
         }
 
         $time = round((microtime(true)-$time)*1000);
@@ -209,13 +225,12 @@ class MinecraftStatus
         fwrite($fp, $statRequest);
         $statResponseHeader = fread($fp, 5);
 
-        if (!$this->validateQueryResponse($statResponseHeader, 0, $sessionId)) {
+        if (!self::validateQueryResponse($statResponseHeader, 0, $sessionId)) {
             fclose($fp);
-            $this->lastError = 'Bad query response';
-            return false;
+            throw Exception('Bad query response');
         }
 
-        $statData = array_merge($this->getStrings($fp, 5), unpack('v', fread($fp, 2)), $this->getStrings($fp, 1));
+        $statData = array_merge(self::getStrings($fp, 5), unpack('v', fread($fp, 2)), self::getStrings($fp, 1));
 
         fclose($fp);
         return array(
@@ -230,24 +245,22 @@ class MinecraftStatus
                      );
     }
 
-    private function fullQuery($hostname, $port)
+    public static function fullQuery($hostname, $port=25565)
     {
-        $sessionId = $this->makeSessionId();
+        $sessionId = self::makeSessionId();
 
         $fp = stream_socket_client('udp://' . $hostname . ':' . $port, $errno, $errmsg);
         stream_set_timeout($fp, 5);
         if (!$fp) {
-            $this->lastError = $errmsg;
-            return false;
+            throw Exception($errmsg);
         }
 
         $time = microtime(true);
 
-        $challengeToken = $this->handleQueryHandshake($fp, $sessionId);
+        $challengeToken = self::handleQueryHandshake($fp, $sessionId);
         if (!$challengeToken) {
             fclose($fp);
-            $this->lastError = 'Bad challenge token';
-            return false;
+            throw Exception('Bad challenge token');
         }
 
         $time = round((microtime(true)-$time)*1000);
@@ -256,10 +269,9 @@ class MinecraftStatus
         fwrite($fp, $statRequest);
         $statResponseHeader = fread($fp, 5);
 
-        if (!$this->validateQueryResponse($statResponseHeader, 0, $sessionId)) {
+        if (!self::validateQueryResponse($statResponseHeader, 0, $sessionId)) {
             fclose($fp);
-            $this->lastError = 'Bad query response';
-            return false;
+            throw Exception('Bad query response');
         }
 
         fread($fp, 11);
@@ -322,6 +334,7 @@ class MinecraftStatus
         return $stats;
     }
 }
+
 
 /*
   =========================
