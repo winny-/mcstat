@@ -183,8 +183,10 @@ class MinecraftQuery
     // Verify packet type and ensure it references our session ID.
     private static function validateQueryResponse($response, $responseType, $sessionId)
     {
-        if (strpos($response, $responseType) !== 0 && (int)substr($response, 1, 4) === $sessionId) {
-            error_log('Received invalid response "' . bin2hex($response) . '". Returning.');
+        $unpacked = unpack('ctype/NsessionId', $response);
+        if ($unpacked['type'] !== $responseType || $unpacked['sessionId'] !== $sessionId) {
+            error_log('Received invalid response "' . bin2hex($response) . '" for request ' . 
+                $responseType.' -- '. bin2hex(pack('N', $sessionId)));
             return false;
         }
         return true;
