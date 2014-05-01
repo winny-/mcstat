@@ -271,9 +271,6 @@ class MinecraftQuery
     {
         $vars = self::startQuery($hostname, $port, false);
         $fp = $vars['fp'];
-        $time = $vars['time'];
-
-
 
         $statData = array_merge(self::getStrings($fp, 5), unpack('v', fread($fp, 2)), self::getStrings($fp, 1));
 
@@ -286,7 +283,7 @@ class MinecraftQuery
                      'player_max' => $statData[4],
                      'port' => (string)$statData[5],
                      'ip' => $statData[6],
-                     'latency' => $time
+                     'latency' => $vars['time'],
                      );
     }
 
