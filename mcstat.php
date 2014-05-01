@@ -21,53 +21,38 @@ class MinecraftStatus
         $this->stats = array();
     }
 
-    public function ping()
+    public function ping($useLegacy=true)
     {
-        try {
-            $newStats = MinecraftServerListPing::ping($this->hostname, $this->port);
-        } catch (Exception $e) {
-            $newStats = false;
-            $this->lastError = $e->getMessage();
+        if ($useLegacy) {
+            return $this->performMethod(array('MinecraftServerListPing', 'ping'), 'Server List Ping');
+        } else {
+            throw new BadMethodCallException('$useLegacy=false not implemented');
         }
-        $this->stats[microtime()] = array(
-                                          'stats' => $newStats,
-                                          'method' => 'Server List Ping',
-                                          'hostname' => $this->hostname,
-                                          'port' => $this->port
-                                          );
-
-        return $newStats;
     }
 
     public function query($fullQuery=true)
     {
         if ($fullQuery) {
-            try {
-                $newStats = MinecraftQuery::fullQuery($this->hostname, $this->port);
-            } catch (Exception $e) {
-                $newStats = false;
-                $this->lastError = $e->getMessage();
-            }
-            $this->stats[microtime()] = array(
-                                              'stats' => $newStats,
-                                              'method' => 'Full Query',
-                                              'hostname' => $this->hostname,
-                                              'port' => $this->port
-                                              );
+            return $this->performMethod(array('MinecraftQuery', 'fullQuery'), 'Full Query');
         } else {
-            try {
-                $newStats = MinecraftQuery::basicQuery($this->hostname, $this->port);
-            } catch (Exception $e) {
-                $newStats = false;
-                $this->lastError = $e->getMessage();
-            }
-            $this->stats[microtime()] = array(
-                                              'stats' => $newStats,
-                                              'method' => 'Basic Query',
-                                              'hostname' => $this->hostname,
-                                              'port' => $this->port
-                                              );
+            return $this->performMethod(array('MinecraftQuery', 'basicQuery'), 'Basic Query');
         }
+    }
+
+    private function performMethod($staticMethod, $statusMethodName)
+    {
+        try {
+            $newStats = call_user_func_array($staticMethod, array($this->hostname, $this->port));
+        } catch (Exception $e) {
+            $newStats = false;
+            $this->lastError = $e->getMessage();
+        }
+        $this->stats[microtime()] = array(
+            'stats'    => $newStats,
+            'method'   => $statusMethodName,
+            'hostname' => $this->hostname,
+            'port'     => $this->port,
+        );
 
         return $newStats;
     }
