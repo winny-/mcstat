@@ -26,7 +26,7 @@ class MinecraftStatus
         if ($useLegacy) {
             return $this->performMethod(array('MinecraftServerListPing', 'ping'), 'Server List Ping');
         } else {
-            throw new BadMethodCallException('$useLegacy=false not implemented');
+            return $this->performMethod(array('MinecraftServerListPing', 'ping17'), 'Server List Ping 1.7');
         }
     }
 
@@ -123,6 +123,89 @@ class MinecraftServerListPing
                      'protocol_version' => self::decodeUTF16BE($response[1]),
                      'latency' => $time
                      );
+    }
+
+    public static function ping17($hostname, $port=25565)
+    {
+        $handshakePacket = self::packData(
+            chr(0) .
+            self::packVarInt(4) .
+            self::packData($hostname) .
+            pack('n', (int)$port) .
+            self::packVarInt(1)
+        );
+        $statusRequestPacket = self::packData(chr(0));
+
+        $time = microtime(true);
+        $fp = stream_socket_client('tcp://' . $hostname . ':' . $port, $errno, $errmsg, MCSTAT_NETWORK_TIMEOUT);
+        stream_set_timeout($fp, MCSTAT_NETWORK_TIMEOUT);
+        if (!$fp) {
+            throw new Exception($errmsg);
+        }
+        fwrite($fp, $handshakePacket);
+        fwrite($fp, $statusRequestPacket);
+
+        self::unpackVarInt($fp);
+        $time = round((microtime(true)-$time)*1000);
+        self::unpackVarInt($fp);
+        $jsonLength = self::unpackVarInt($fp);
+
+        for ($jsonString = ''; strlen($jsonString) < $jsonLength; $jsonString .= fread($fp, 2048))
+            ;
+        fclose($fp);
+        $json = json_decode($jsonString, true);
+        if (isset($json['players']['sample'])) {
+            foreach ($json['players']['sample'] as $player) {
+                $players[] = $player['name'];
+            }
+        } else {
+            $players = array();
+        }
+
+        return array(
+            'latency' => $time,
+            'server_version' => $json['version']['name'],
+            'protocol_version' => $json['version']['protocol'],
+            'player_count' => $json['players']['online'],
+            'player_max' => $json['players']['max'],
+            'motd' => $json['description'],
+            'players' => $players,
+        );
+    }
+
+    private static function packData($data)
+    {
+        return self::packVarInt(strlen($data)) . $data;
+    }
+
+    private static function unpackVarInt($fp)
+    {
+        $int = 0;
+        $pos = 0;
+        while (true) {
+            $byte = ord(fread($fp, 1));
+            $int |= ($byte & 0x7F) << $pos++ * 7;
+            if ($pos > 5) {
+                throw new Exception('VarInt too big');
+            }
+            if (($byte & 0x80) !== 128) {
+                break;
+            }
+        }
+        return $int;
+    }
+
+    private static function packVarInt($int)
+    {
+        $varInt = '';
+        while (true) {
+            if (($int & 0xFFFFFF80) === 0) {
+                $varInt .= chr($int);
+                return $varInt;
+            }
+            $varInt .= chr($int & 0x7F | 0x80);
+            $int >>= 7;
+        }
     }
 }
 
