@@ -238,15 +238,16 @@ class MinecraftQuery
 
     private static function getString($fp)
     {
-        for ($lastChar = fread($fp, 1), $currentString = ''; $lastChar !== chr(0); $lastChar = fread($fp, 1)) {
-            $currentString .= $lastChar;
+        $string = '';
+        while (($lastChar = fread($fp, 1)) !== chr(0)) {
+            $string .= $lastChar;
         }
-        return $currentString;
+        return $string;
     }
 
     private static function getStrings($fp, $count)
     {
-        for ($nulsProcessed = 0; $nulsProcessed < $count; $nulsProcessed++) {
+        for ($stringsRecieved = 0; $stringsRecieved < $count; $stringsRecieved++) {
             $strings[] = self::getString($fp);
         }
 
@@ -256,11 +257,7 @@ class MinecraftQuery
     private static function parseKeyValueSection($fp)
     {
         $keyValuePairs = array();
-        while (true) {
-            $key = self::getString($fp);
-            if ($key === '') {
-                break;
-            }
+        while (($key = self::getString($fp)) !== '') {
             $value = self::getString($fp);
             $keyValuePairs[$key] = $value;
         }
