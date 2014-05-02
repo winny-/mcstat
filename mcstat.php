@@ -335,24 +335,29 @@ class MinecraftQuery
         );
     }
 
+    private static function unpackBasicPort($fp)
+    {
+        $unpacked = unpack('vport', fread($fp, 2));
+        return (string)$unpacked['port'];
+    }
+
     public static function basicQuery($hostname, $port=25565)
     {
         $vars = self::startQuery($hostname, $port, false);
         $fp = $vars['fp'];
 
-        $statData = array_merge(self::getStrings($fp, 5), unpack('v', fread($fp, 2)), self::getStrings($fp, 1));
-
+        $stats = array(
+            'motd'         => self::getString($fp),
+            'gametype'     => self::getString($fp),
+            'map'          => self::getString($fp),
+            'player_count' => self::getString($fp),
+            'player_max'   => self::getString($fp),
+            'port'         => self::unpackBasicPort($fp),
+            'ip'           => self::getString($fp),
+            'latency'      => $vars['time'],
+        );
         fclose($fp);
-        return array(
-                     'motd' => $statData[0],
-                     'gametype' => $statData[1],
-                     'map' => $statData[2],
-                     'player_count' => $statData[3],
-                     'player_max' => $statData[4],
-                     'port' => (string)$statData[5],
-                     'ip' => $statData[6],
-                     'latency' => $vars['time'],
-                     );
+        return $stats;
     }
 
     public static function fullQuery($hostname, $port=25565)
