@@ -6,7 +6,7 @@ define('MCSTAT_NETWORK_TIMEOUT', 5);
 
 function mcstat_expect($fp, $string)
 {
-    $recieved = '';
+    $recievedString = '';
     for ($bytes = strlen($string), $cur = 0; $cur < $bytes; $cur++) {
         $recievedByte = fread($fp, 1);
         $expectedByte = $string[$cur];
