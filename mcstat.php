@@ -393,10 +393,10 @@ class MinecraftQuery
 
         fread($fp, 10);  // 10 bytes padding: 01 70 6C 61 79 65 72 5F 00 00
 
-        $players = array();
-        for ($last = self::getString($fp); $last !== ''; $last = self::getString($fp))
-            $players[] = $last;
-        $stats['players'] = $players;
+        $stats['players'] = array();
+        while (($player = self::getString($fp)) !== '') {
+            $stats['players'][] = $player;
+        }
         fclose($fp);
         return $stats;
     }
