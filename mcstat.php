@@ -4,6 +4,21 @@
 define('MCSTAT_NETWORK_TIMEOUT', 5);
 
 
+function mcstat_expect($fp, $string)
+{
+    $recieved = '';
+    for ($bytes = strlen($string), $cur = 0; $cur < $bytes; $cur++) {
+        $recievedByte = fread($fp, 1);
+        $expectedByte = $string[$cur];
+        $recievedString .= $recievedByte;
+        if ($recievedByte !== $expectedByte) {
+            $errorMessage = 'Expected ' . bin2hex($string) . ' but recieved ' . bin2hex($recievedString);
+            $errorMessage .= ' problem byte: '.bin2hex($recievedByte).' (position '.$cur.')';
+            throw new Exception($errorMessage);
+        }
+    }
+}
+
 class MinecraftStatus
 {
 
@@ -368,7 +383,7 @@ class MinecraftQuery
         $stats = array();
         $stats['latency'] = $vars['time'];
 
-        fread($fp, 11);  // 11 bytes padding: 73 70 6C 69 74 6E 75 6D 00 80 00
+        mcstat_expect($fp, "\x73\x70\x6C\x69\x74\x6E\x75\x6D\x00\x80\x00");
 
         foreach (self::parseKeyValueSection($fp) as $key => $value) {
             switch ($key) {
@@ -391,7 +406,7 @@ class MinecraftQuery
             $stats[$key] = $value;
         }
 
-        fread($fp, 10);  // 10 bytes padding: 01 70 6C 61 79 65 72 5F 00 00
+        mcstat_expect($fp, "\x01\x70\x6C\x61\x79\x65\x72\x5F\x00\x00");
 
         $stats['players'] = array();
         while (($player = self::getString($fp)) !== '') {
