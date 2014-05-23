@@ -28,36 +28,50 @@ class MinecraftStatus
     public $lastError;
     public $stats;
 
+    const SERVER_LIST_PING     = 'Server List Ping';
+    const SERVER_LIST_PING_1_7 = 'Server List Ping 1.7';
+    const BASIC_QUERY          = 'Basic Query';
+    const FULL_QUERY           = 'Full Query';
+    private $methodTable;
+
     function __construct($hostname, $port=25565)
     {
         $this->hostname = $hostname;
         $this->port = $port;
         $this->lastError = null;
         $this->stats = array();
+        $this->methodTable = array(
+            self::SERVER_LIST_PING     => array('MinecraftServerListPing', 'ping'),
+            self::SERVER_LIST_PING_1_7 => array('MinecraftServerListPing', 'ping17'),
+            self::BASIC_QUERY          => array('MinecraftQuery', 'basicQuery'),
+            self::FULL_QUERY           => array('MinecraftQuery', 'fullQuery'),
+        );
     }
 
     public function ping($useLegacy=true)
     {
         if ($useLegacy) {
-            return $this->performMethod(array('MinecraftServerListPing', 'ping'), 'Server List Ping');
+            return $this->performStatusMethod(self::SERVER_LIST_PING);
         } else {
-            return $this->performMethod(array('MinecraftServerListPing', 'ping17'), 'Server List Ping 1.7');
+            return $this->performStatusMethod(self::SERVER_LIST_PING_1_7);
         }
     }
 
     public function query($fullQuery=true)
     {
         if ($fullQuery) {
-            return $this->performMethod(array('MinecraftQuery', 'fullQuery'), 'Full Query');
+            return $this->performStatusMethod(self::FULL_QUERY);
         } else {
-            return $this->performMethod(array('MinecraftQuery', 'basicQuery'), 'Basic Query');
+            return $this->performStatusMethod(self::BASIC_QUERY);
         }
     }
 
-    private function performMethod($staticMethod, $statusMethodName)
+    private function performStatusMethod($statusMethodName)
     {
+        $method = $this->methodTable[$statusMethodName];
+        $arguments = array($this->hostname, $this->port);
         try {
-            $newStats = call_user_func_array($staticMethod, array($this->hostname, $this->port));
+            $newStats = call_user_func_array($method, $arguments);
         } catch (Exception $e) {
             $newStats = false;
             $this->lastError = $e->getMessage();
