@@ -10,8 +10,7 @@ PHP class, web page, CLI tool, and [Munin][] plugin to get information from a
 
 ## Protocol Support
 
-mcstat supports 1.5.2 style [Server List Ping][] which works with minecraft server `1.4.2` and later, including `1.7.5`.
-mcstat also supports the UDP [Query][] protocol.
+mcstat supports [Server List Ping][] as seen in `1.7` and later, and `1.5.2`. Server List Ping `1.5.2` works for older Minecraft servers (all the way back to `1.4.2`), while the `1.7` Server List Ping should be used for newer setups. mcstat also supports the UDP full and basic [Query][] protocols.
 
 [Server List Ping]: http://wiki.vg/Server_List_Ping
 [Query]: http://wiki.vg/Query
@@ -28,11 +27,10 @@ well tested!
 
 ### mcstat as a Program
 
-`mcstat.php` may be invoked as a program. Because it's also a php library,
-it doesn't come with a shebang line. Install like this:
+`mcstat_program.php` is a script for querying Minecraft servers. You can install a stand-alone version like so:
 
-    $ echo '#!/usr/bin/env php'|cat - mcstat.php > ~/bin/mcstat
-    $ chmod 755 ~/bin/mcstat
+    $ make
+    $ cp mcstat ~/bin/mcstat
 
 It's very simple and gets the job done:
 
@@ -51,7 +49,8 @@ otherwise php spams stderr unconditionally.*
 
 Install minecraft_users_ like any other munin plugin:
 
-    # cp minecraft_users.php /usr/share/munin/plugins/minecraft_users
+    $ make # This create a stand-alone minecraft_users_ script
+    # cp minecraft_users_ /usr/share/munin/plugins/minecraft_users_
     # chmod 755 /usr/share/munin/plugins/minecraft_users
     # ln -s /usr/share/munin/plugins/minecraft_users_ \
         /etc/munin/plugins/minecraft_users_<hostname>:<port>
@@ -87,12 +86,12 @@ are ran against against a live server running on localhost.
 
 Run the script as follows:
 
-    cd test && ./testrunner.sh
+    make test
 
 By default `testrunner.sh` tests against all server versions `1.4.2` and later.
 Override this like so:
 
-    cd test && env Versions='1.7.4 1.7.5' ./testrunner.sh
+    env Versions='1.7.4 1.7.5' make test
 
 As of commit `979fed97d06a35a96af9195e7750ea1648602154`, `basicQuery`,
 `fullQuery`, and `serverListPing` all pass.
