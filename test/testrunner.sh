@@ -94,7 +94,7 @@ run() {
 }
 
 cd "$(dirname "$0")"
-ln -sf ../minecraft_users_ "$MinecraftUsersSymlink"
+ln -sf ../minecraft_users_program.php "$MinecraftUsersSymlink"
 errors=0
 for v in $Versions; do
     runTest "$v"

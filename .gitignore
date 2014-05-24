@@ -2,3 +2,5 @@ test/server*
 test/config.php
 test/minecraft_users_*
 .DS_Store
+mcstat
+minecraft_users_
