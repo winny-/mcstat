@@ -17,13 +17,20 @@ mcstat supports [Server List Ping][] as seen in `1.7` and later, and `1.5.2`. Se
 
 ## Usage
 
-### stat.php
+### minecraft_users_ — A Munin plugin
 
-`stat.php` is a simple web page that lets users query a given server.
-**Note:** `stat.php` shouldn't be used on a public server as it's not
-well tested!
+![Screenshot of the minecraft_users_ plugin](https://i.imgur.com/650zo2U.png)
 
-![Screenshot of stat.php](https://i.imgur.com/Nc4yVOi.png)
+Install minecraft_users_ like any other munin plugin:
+
+    $ make # This create a stand-alone minecraft_users_ script
+    # cp minecraft_users_ /usr/share/munin/plugins/minecraft_users_
+    # chmod 755 /usr/share/munin/plugins/minecraft_users
+    # ln -s /usr/share/munin/plugins/minecraft_users_ \
+        /etc/munin/plugins/minecraft_users_<hostname>:<port>
+    # service munin-node reload
+
+No configuration is necessary because minecraft_users_ is a wildcard plugin.
 
 ### mcstat as a Program
 
@@ -43,20 +50,13 @@ It's very simple and gets the job done:
 [`TERM` must be set to a known terminal](https://github.com/nodesocket/commando/issues/9),
 otherwise php spams stderr unconditionally.*
 
-### minecraft_users_ — A Munin plugin
+### stat.php
 
-![Screenshot of the minecraft_users_ plugin](https://i.imgur.com/650zo2U.png)
+`stat.php` is a simple web page that lets users query a given server.
+**Note:** `stat.php` shouldn't be used on a public server as it's not
+well tested!
 
-Install minecraft_users_ like any other munin plugin:
-
-    $ make # This create a stand-alone minecraft_users_ script
-    # cp minecraft_users_ /usr/share/munin/plugins/minecraft_users_
-    # chmod 755 /usr/share/munin/plugins/minecraft_users
-    # ln -s /usr/share/munin/plugins/minecraft_users_ \
-        /etc/munin/plugins/minecraft_users_<hostname>:<port>
-    # service munin-node reload
-
-No configuration is necessary because minecraft_users_ is a wildcard plugin.
+![Screenshot of stat.php](https://i.imgur.com/Nc4yVOi.png)
 
 ### Usage as a PHP Class
 
