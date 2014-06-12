@@ -45,7 +45,7 @@ otherwise php spams stderr unconditionally.*
 
 ### minecraft_users_ — A Munin plugin
 
-![Screenshot of the minecraft_users_ plugin](https://i.imgur.com/VutO3X9.png)
+![Screenshot of the minecraft_users_ plugin](https://i.imgur.com/650zo2U.png)
 
 Install minecraft_users_ like any other munin plugin:
 
