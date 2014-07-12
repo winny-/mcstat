@@ -19,7 +19,7 @@ mcstat supports [Server List Ping][] as seen in `1.7` and later, and `1.5.2`. Se
 
 ### minecraft_users_ — A Munin plugin
 
-![Screenshot of the minecraft_users_ plugin](https://i.imgur.com/650zo2U.png)
+![Screenshot of the minecraft_users_ plugin](https://imgur.com/LxYK5pg.png)
 
 Install minecraft_users_ like any other munin plugin:
 
