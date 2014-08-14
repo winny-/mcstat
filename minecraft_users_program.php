@@ -19,7 +19,7 @@ require_once dirname(__FILE__).'/mcstat.php';
 error_reporting(E_ERROR | E_PARSE);
 
 $plugin_name = $argv[0];
-if (preg_match('/minecraft_users_([^[:blank:][:cntrl:]]+)(?::([0-9]+))?$/', $plugin_name, $matches)) {
+if (preg_match('/minecraft_users_([^[:blank:][:cntrl:]]+)(?::([0-9]+))?$/U', $plugin_name, $matches)) {
     $host = $matches[1];
     $port = empty($matches[2]) ? '25565' : $matches[2];
 } else {
