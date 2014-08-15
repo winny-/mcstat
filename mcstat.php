@@ -141,10 +141,13 @@ class MinecraftServerListPing
         if (strpos($response, 0xFF) !== 0) {
             throw new Exception('Bad reply from server');
         }
+        $raw = $response;
         $response = substr($response, 3);
         $response = explode(pack('n', 0), $response);
 
         return array(
+                     'request' => utf8_encode($request),
+                     'response' => utf8_encode($raw),
                      'player_count' => self::decodeUTF16BE($response[4]),
                      'player_max' => self::decodeUTF16BE($response[5]),
                      'motd' => self::decodeUTF16BE($response[3]),
@@ -174,13 +177,19 @@ class MinecraftServerListPing
         fwrite($fp, $handshakePacket);
         fwrite($fp, $statusRequestPacket);
 
-        self::unpackVarInt($fp);
+        $response = '';
+        self::unpackVarInt($fp, $response);
         $time = round((microtime(true)-$time)*1000);
-        self::unpackVarInt($fp);
-        $jsonLength = self::unpackVarInt($fp);
+        self::unpackVarInt($fp, $response);
+        $jsonLength = self::unpackVarInt($fp, $response);
 
-        for ($jsonString = ''; strlen($jsonString) < $jsonLength; $jsonString .= fread($fp, 2048))
-            ;
+        $jsonString = '';
+        while (strlen($jsonString) < $jsonLength) {
+            $chunk = fread($fp, 2048);
+            $response .= $chunk;
+            $jsonString .= $chunk;
+        }
+
         fclose($fp);
         $json = json_decode($jsonString, true);
         if (isset($json['players']['sample'])) {
@@ -192,6 +201,10 @@ class MinecraftServerListPing
         }
 
         return array(
+            'handshake' => utf8_encode($handshakePacket),
+            'request' => utf8_encode($statusRequestPacket),
+            'response' => utf8_encode($response),
+            'json' => $json,
             'latency' => $time,
             'server_version' => $json['version']['name'],
             'protocol_version' => $json['version']['protocol'],
@@ -207,12 +220,16 @@ class MinecraftServerListPing
         return self::packVarInt(strlen($data)) . $data;
     }
 
-    private static function unpackVarInt($fp)
+    private static function unpackVarInt($fp, &$response = null)
     {
         $int = 0;
         $pos = 0;
         while (true) {
-            $byte = ord(fread($fp, 1));
+            $chunk = fread($fp, 1);
+            if ($response !== null) {
+                $response .= $chunk;
+            }
+            $byte = ord($chunk);
             $int |= ($byte & 0x7F) << $pos++ * 7;
             if ($pos > 5) {
                 throw new Exception('VarInt too big');
