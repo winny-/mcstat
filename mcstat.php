@@ -112,7 +112,7 @@ class MinecraftServerListPing
         return mb_convert_encoding($string, 'UTF-8', 'UTF-16BE');
     }
 
-    public static function ping($hostname, $port=25565)
+    public static function ping($hostname, $port=25565, $debug=false)
     {
         // 1. pack data to send
         $request = pack('nc', 0xfe01, 0xfa) .
@@ -141,23 +141,29 @@ class MinecraftServerListPing
         if (strpos($response, 0xFF) !== 0) {
             throw new Exception('Bad reply from server');
         }
-        $raw = $response;
-        $response = substr($response, 3);
-        $response = explode(pack('n', 0), $response);
+        $responseData = substr($response, 3);
+        $responseData = explode(pack('n', 0), $responseData);
 
-        return array(
-                     'request' => utf8_encode($request),
-                     'response' => utf8_encode($raw),
-                     'player_count' => self::decodeUTF16BE($response[4]),
-                     'player_max' => self::decodeUTF16BE($response[5]),
-                     'motd' => self::decodeUTF16BE($response[3]),
-                     'server_version' => self::decodeUTF16BE($response[2]),
-                     'protocol_version' => self::decodeUTF16BE($response[1]),
-                     'latency' => $time
-                     );
+        $stats = array(
+            'player_count' => self::decodeUTF16BE($responseData[4]),
+            'player_max' => self::decodeUTF16BE($responseData[5]),
+            'motd' => self::decodeUTF16BE($responseData[3]),
+            'server_version' => self::decodeUTF16BE($responseData[2]),
+            'protocol_version' => self::decodeUTF16BE($responseData[1]),
+            'latency' => $time,
+        );
+
+        if ($debug) {
+            $stats['debug'] = array(
+                'request' => $request,
+                'response' => $response,
+            );
+        }
+
+        return $stats;
     }
 
-    public static function ping17($hostname, $port=25565)
+    public static function ping17($hostname, $port=25565, $debug=false)
     {
         $handshakePacket = self::packData(
             chr(0) .
@@ -174,21 +180,22 @@ class MinecraftServerListPing
         if (!$fp) {
             throw new Exception($errmsg);
         }
+
         fwrite($fp, $handshakePacket);
         fwrite($fp, $statusRequestPacket);
 
         $response = '';
-        self::unpackVarInt($fp, $response);
+        self::unpackVarInt($fp, $response); // Length of packet
         $time = round((microtime(true)-$time)*1000);
-        self::unpackVarInt($fp, $response);
+        self::unpackVarInt($fp, $response); // Packet ID
         $jsonLength = self::unpackVarInt($fp, $response);
 
         $jsonString = '';
         while (strlen($jsonString) < $jsonLength) {
             $chunk = fread($fp, 2048);
-            $response .= $chunk;
             $jsonString .= $chunk;
         }
+        $response .= $jsonString;
 
         fclose($fp);
         $json = json_decode($jsonString, true);
@@ -200,10 +207,7 @@ class MinecraftServerListPing
             $players = array();
         }
 
-        return array(
-            'handshake' => utf8_encode($handshakePacket),
-            'request' => utf8_encode($statusRequestPacket),
-            'response' => utf8_encode($response),
+        $stats = array(
             'json' => $json,
             'latency' => $time,
             'server_version' => $json['version']['name'],
@@ -213,6 +217,16 @@ class MinecraftServerListPing
             'motd' => $json['description'],
             'players' => $players,
         );
+
+        if ($debug) {
+            $stats['debug'] = array(
+                'handshake' => $handshakePacket,
+                'request' => $statusRequestPacket,
+                'response' => $response,
+            );
+        }
+
+        return $stats;
     }
 
     private static function packData($data)
@@ -220,7 +234,7 @@ class MinecraftServerListPing
         return self::packVarInt(strlen($data)) . $data;
     }
 
-    private static function unpackVarInt($fp, &$response = null)
+    private static function unpackVarInt($fp, &$response=null)
     {
         $int = 0;
         $pos = 0;
